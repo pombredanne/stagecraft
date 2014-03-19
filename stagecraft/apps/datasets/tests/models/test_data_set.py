@@ -16,7 +16,7 @@ from django.test import TestCase, TransactionTestCase
 
 from stagecraft.apps.datasets.models import DataGroup, DataSet, DataType
 from stagecraft.apps.datasets.models.data_set import (
-    DeleteNotImplementedError, ImmutableFieldError)
+    DeleteNotImplementedError, ImmutableFieldError, get_data_set_url_fragments)
 from stagecraft.libs.backdrop_client import (BackdropError,
                                              disable_backdrop_connection)
 
@@ -296,3 +296,28 @@ class BackdropIntegrationTestCase(TransactionTestCase):
             data_type=self.data_type)
 
         DataSet.objects.get(name='test_dataset')  # should succeed
+
+
+def test_get_data_set_urls():
+    dg = DataGroup(name='dg1')
+    dt = DataType(name='dt1')
+    data_set = DataSet(name='ds1', data_group=dg, data_type=dt)
+
+    expected_urls = set([
+        '/data-sets/ds1',  # for the detail view, the rest are for list
+        '/data-sets',
+        '/data-sets?data-group=dg1',
+        '/data-sets?data-group=dg1&data-type=dt1',
+        '/data-sets?data-group=dg1&data_type=dt1',
+        '/data-sets?data-type=dt1',
+        '/data-sets?data-type=dt1&data-group=dg1',
+        '/data-sets?data-type=dt1&data_group=dg1',
+        '/data-sets?data_group=dg1',
+        '/data-sets?data_group=dg1&data-type=dt1',
+        '/data-sets?data_group=dg1&data_type=dt1',
+        '/data-sets?data_type=dt1',
+        '/data-sets?data_type=dt1&data-group=dg1',
+        '/data-sets?data_type=dt1&data_group=dg1',
+    ])
+
+    assert_equal(set(get_data_set_url_fragments(data_set)), expected_urls)
