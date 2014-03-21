@@ -246,8 +246,11 @@ class BackdropIntegrationTestCase(TransactionTestCase):
         cls.data_group.delete()
         cls.data_type.delete()
 
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_stagecraft_calls_backdrop_on_save(self, mock_create_dataset):
+    def test_model_not_saved_on_backdrop_failure(self, 
+                                                 mock_create_dataset, 
+                                                 mock_purge_varnish_cache):
         DataSet.objects.create(
             name='test_dataset',
             data_group=self.data_group,
@@ -256,7 +259,28 @@ class BackdropIntegrationTestCase(TransactionTestCase):
         mock_create_dataset.assert_called_once_with('test_dataset', 0)
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_model_not_saved_on_backdrop_failure(self, mock_create_dataset):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    @mock.patch('stagecraft.apps.datasets.models.data_set.get_data_set_url_fragments')
+    def test_dataset_purges_relevant_caches_on_save(self, 
+                                                    mock_data_set_url_fragments, 
+                                                    mock_purge_varnish_cache,
+                                                    mock_create_dataset):
+        mock_url_fragments = ['some_url']
+        mock_data_set_url_fragments.return_value = mock_url_fragments
+
+        data_set = DataSet.objects.create(
+            name='test_dataset',
+            data_group=self.data_group,
+            data_type=self.data_type)
+
+        mock_data_set_url_fragments.assert_called_once_with(data_set)
+        mock_purge_varnish_cache.assert_called_once_with(mock_url_fragments)
+
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
+    def test_model_not_saved_on_backdrop_failure(self, 
+                                                 mock_create_dataset, 
+                                                 mock_purge_varnish_cache):
         # Not saved because of being rolled back
         mock_create_dataset.side_effect = BackdropError('Failed')
 
@@ -274,8 +298,9 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
     @mock.patch.object(Manager, 'get_or_create')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     def test_backdrop_not_called_on_model_save_failure(
-            self, mock_get_or_create, mock_create_dataset):
+            self, mock_get_or_create, mock_create_dataset, mock_purge_varnish_cache):
 
         mock_get_or_create.side_effect = Exception("My first fake db error")
 
@@ -287,10 +312,31 @@ class BackdropIntegrationTestCase(TransactionTestCase):
                 data_type=self.data_type)
         )
 
-        mock_create_dataset.assert_not_called('test_dataset', 0)
-
+        assert_equal(mock_create_dataset.called, False)
+        
+    @mock.patch.object(Manager, 'get_or_create')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_model_saved_on_backdrop_success(self, mock_create_dataset):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_purge_not_called_on_model_save_failure(
+            self, mock_get_or_create, mock_create_dataset, mock_purge_varnish_cache):
+
+        mock_get_or_create.side_effect = Exception("My first fake db error")
+
+        assert_raises(
+            Exception,
+            lambda: DataSet.objects.create(
+                name='test_dataset',
+                data_group=self.data_group,
+                data_type=self.data_type)
+        )
+
+        assert_equal(mock_purge_varnish_cache.called, False)
+
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
+    def test_model_not_saved_on_backdrop_failure(self, 
+                                                 mock_create_dataset, 
+                                                 mock_purge_varnish_cache):
         DataSet.objects.create(
             name='test_dataset',
             data_group=self.data_group,
