@@ -91,14 +91,6 @@ def purge_varnish_cache(url_fragments):
 
             for url in urls:
                 resp = requests.request('PURGE', url, headers=headers)
-                print('making PURGE with {} and {}'.format(url, headers))
-
-                #debug_text = '** frntnd_host: {}\n'.format(frontend_host_name)
-                debug_text = '** headers: {}\n'.format(headers)
-                debug_text += '** url: {}\n'.format(url)
-                debug_text += '** resp.content: {}\n'.format(resp.content)
-                with open('/var/apps/stagecraft/DEBUG', 'a') as f:
-                    f.write('{}\n'.format(debug_text))
 
     #if env_name == 'production':
 
