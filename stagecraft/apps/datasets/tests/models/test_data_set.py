@@ -310,39 +310,23 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
 @mock.patch('requests.request')
 def test_purge_varnish_cache(mock_request):
-    expected_urls = set([
-        '/data-sets/ds1',  # for the detail view, the rest are for list
+    urls = set([
+        '/data-sets/ds1', # for the detail view, the rest are for list
         '/data-sets',
         '/data-sets?data-group=dg1',
         '/data-sets?data-group=dg1&data-type=dt1',
     ])
-    purge_varnish_cache(expected_urls)
+    hosts = [u'localhost', u'stagecraft.perfplat.dev']    
+    expected_calls = []
+    for host in hosts:
+        for url in urls:
+          expected_calls.append(mock.call(u'PURGE',
+                                          'http://pp-development-1.localdomain:7999{}'.format(url),
+                                          headers={u'Host': host}))
 
-    expected_calls = [
-        {'url': '/data-sets/ds1',
-         'host': 'localhost'},
-        {'url': '/data-sets',
-         'host': 'localhost'},
-        {'url': '/data-sets?data-group=dg1',
-         'host': 'localhost'},
-        {'url': '/data-sets?data-group=dg1&data-type=dt1',
-         'host': 'localhost'},
-        {'url': '/data-sets/ds1',
-         'host': 'stagecraft.perfplat.dev'},
-        {'url': '/data-sets',
-         'host': 'stagecraft.perfplat.dev'},
-        {'url': '/data-sets?data-group=dg1',
-         'host': 'stagecraft.perfplat.dev'},
-        {'url': '/data-sets?data-group=dg1&data-type=dt1',
-         'host': 'stagecraft.perfplat.dev'},
-    ]
-
-    for expected_call in expected_calls:
-        print('** expected call: {}'.format(expected_call))
-        mock_request.assert_called_once_with(
-            'PURGE',
-            expected_call['url'],
-            header={'Host': expected_call['host']})
+    purge_varnish_cache(urls)
+    
+    mock_request.assert_has_calls(expected_calls, any_order=True)
 
 
 def test_get_data_set_urls():
