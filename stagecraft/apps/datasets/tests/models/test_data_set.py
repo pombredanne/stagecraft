@@ -16,7 +16,8 @@ from django.test import TestCase, TransactionTestCase
 
 from stagecraft.apps.datasets.models import DataGroup, DataSet, DataType
 from stagecraft.apps.datasets.models.data_set import (
-    DeleteNotImplementedError, ImmutableFieldError, get_data_set_url_fragments)
+    DeleteNotImplementedError, ImmutableFieldError,
+    purge_varnish_cache, get_data_set_url_fragments)
 from stagecraft.libs.backdrop_client import (BackdropError,
                                              disable_backdrop_connection)
 
@@ -306,6 +307,43 @@ class BackdropIntegrationTestCase(TransactionTestCase):
         data_set.save()
 
         mock_create_dataset.assert_called_once_with('test_dataset', 0)
+
+@mock.patch('requests.request')
+def test_purge_varnish_cache(mock_request):
+    expected_urls = set([
+        '/data-sets/ds1',  # for the detail view, the rest are for list
+        '/data-sets',
+        '/data-sets?data-group=dg1',
+        '/data-sets?data-group=dg1&data-type=dt1',
+    ])
+    purge_varnish_cache(expected_urls)
+
+    expected_calls = [
+        {'url': '/data-sets/ds1',
+         'host': 'localhost'},
+        {'url': '/data-sets',
+         'host': 'localhost'},
+        {'url': '/data-sets?data-group=dg1',
+         'host': 'localhost'},
+        {'url': '/data-sets?data-group=dg1&data-type=dt1',
+         'host': 'localhost'},
+        {'url': '/data-sets/ds1',
+         'host': 'stagecraft.perfplat.dev'},
+        {'url': '/data-sets',
+         'host': 'stagecraft.perfplat.dev'},
+        {'url': '/data-sets?data-group=dg1',
+         'host': 'stagecraft.perfplat.dev'},
+        {'url': '/data-sets?data-group=dg1&data-type=dt1',
+         'host': 'stagecraft.perfplat.dev'},
+    ]
+
+    for expected_call in expected_calls:
+        print('** expected call: {}'.format(expected_call))
+        mock_request.assert_called_once_with(
+            'PURGE',
+            expected_call['url'],
+            header={'Host': expected_call['host']})
+
 
 def test_get_data_set_urls():
     dg = DataGroup(name='dg1')

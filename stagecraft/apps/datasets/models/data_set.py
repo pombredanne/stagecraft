@@ -5,6 +5,7 @@ from itertools import chain, product
 import requests
 from socket import gethostbyaddr, gethostbyname_ex
 
+from django.conf import settings
 from django.core import urlresolvers
 from django.core.exceptions import ValidationError
 from django.db import models
@@ -75,19 +76,31 @@ def get_data_set_url_fragments(data_set):
             | _get_url_fragments_for_detail_view(data_set))
 
 
-def purge_varnish_cache(env_name, url_fragments):
+def purge_varnish_cache(url_fragments):
     _, _, ip_addrs = gethostbyname_ex('frontend')
-    host_names = [gethostbyaddr(ip_addr)[0] for ip_addr in ip_addrs]
+    frontend_host_names = [gethostbyaddr(ip_addr)[0] for ip_addr in ip_addrs]
 
-    headers = {
-        'Host': 'stagecraft.{}.performance.service.gov.uk'.format(env_name)
-    }
-    for url_fragment in url_fragments:
-        url = 'http://localhost:7999{}'.format(url_fragment)
+    hosts_for_headers = settings.ALLOWED_HOSTS
 
-        resp = requests.request('PURGE', url, headers=headers)
-        with open('/var/apps/stagecraft/DEBUG', 'a') as f:
-            f.write('url: {}\nresponse: {}\n'.format(url, resp))
+    for frontend_host_name in frontend_host_names:
+        urls = ['http://{}:7999{}'.format(frontend_host_name, url_fragment)
+                for url_fragment in url_fragments]
+
+        for host_for_headers in hosts_for_headers:
+            headers = {'Host': host_for_headers}
+
+            for url in urls:
+                resp = requests.request('PURGE', url, headers=headers)
+                print('making PURGE with {} and {}'.format(url, headers))
+
+                #debug_text = '** frntnd_host: {}\n'.format(frontend_host_name)
+                debug_text = '** headers: {}\n'.format(headers)
+                debug_text += '** url: {}\n'.format(url)
+                debug_text += '** resp.content: {}\n'.format(resp.content)
+                with open('/var/apps/stagecraft/DEBUG', 'a') as f:
+                    f.write('{}\n'.format(debug_text))
+
+    #if env_name == 'production':
 
     #run("curl -v -H 'Host: stagecraft.{}.performance.service.gov.uk' "
     #"-X PURGE 'http://{}:7999{}'".format(
@@ -171,14 +184,12 @@ class DataSet(models.Model):
         is_insert = self.pk is None
         super(DataSet, self).save(*args, **kwargs)
         size_bytes = self.capped_size if self.is_capped else 0
+        purge_varnish_cache(get_data_set_url_fragments(self))  # MOVE ME DOWN!!
+
         # Backdrop can't be rolled back dude.
         # Ensure this is the final action of the save method.
         if is_insert:
             create_dataset(self.name, size_bytes)
-
-        #with open('/var/apps/stagecraft/DEBUG', 'a') as f:
-        #    f.write('in save_model() - request: ' + str(request) + '\n')
-        purge_varnish_cache('env_here', get_data_set_url_fragments(self))
 
     @property
     def is_capped(self):
