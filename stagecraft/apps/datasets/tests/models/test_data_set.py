@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 
 import mock
 
+from django.conf import settings
+
 from contextlib import contextmanager
 
 from nose.tools import assert_raises, assert_equal
@@ -248,8 +250,8 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_model_not_saved_on_backdrop_failure(self, 
-                                                 mock_create_dataset, 
+    def test_model_not_saved_on_backdrop_failure(self,
+                                                 mock_create_dataset,
                                                  mock_purge_varnish_cache):
         DataSet.objects.create(
             name='test_dataset',
@@ -260,11 +262,14 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
-    @mock.patch('stagecraft.apps.datasets.models.data_set.get_data_set_url_fragments')
-    def test_dataset_purges_relevant_caches_on_save(self, 
-                                                    mock_data_set_url_fragments, 
-                                                    mock_purge_varnish_cache,
-                                                    mock_create_dataset):
+    @mock.patch(
+        'stagecraft.apps.datasets.models.data_set.get_data_set_url_fragments')
+    def test_dataset_purges_relevant_caches_on_save(
+            self,
+            mock_data_set_url_fragments,
+            mock_purge_varnish_cache,
+            mock_create_dataset):
+
         mock_url_fragments = ['some_url']
         mock_data_set_url_fragments.return_value = mock_url_fragments
 
@@ -278,8 +283,8 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_model_not_saved_on_backdrop_failure(self, 
-                                                 mock_create_dataset, 
+    def test_model_not_saved_on_backdrop_failure(self,
+                                                 mock_create_dataset,
                                                  mock_purge_varnish_cache):
         # Not saved because of being rolled back
         mock_create_dataset.side_effect = BackdropError('Failed')
@@ -300,7 +305,10 @@ class BackdropIntegrationTestCase(TransactionTestCase):
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     def test_backdrop_not_called_on_model_save_failure(
-            self, mock_get_or_create, mock_create_dataset, mock_purge_varnish_cache):
+            self,
+            mock_get_or_create,
+            mock_create_dataset,
+            mock_purge_varnish_cache):
 
         mock_get_or_create.side_effect = Exception("My first fake db error")
 
@@ -313,12 +321,15 @@ class BackdropIntegrationTestCase(TransactionTestCase):
         )
 
         assert_equal(mock_create_dataset.called, False)
-        
+
     @mock.patch.object(Manager, 'get_or_create')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     def test_purge_not_called_on_model_save_failure(
-            self, mock_get_or_create, mock_create_dataset, mock_purge_varnish_cache):
+            self,
+            mock_get_or_create,
+            mock_create_dataset,
+            mock_purge_varnish_cache):
 
         mock_get_or_create.side_effect = Exception("My first fake db error")
 
@@ -334,8 +345,8 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_model_not_saved_on_backdrop_failure(self, 
-                                                 mock_create_dataset, 
+    def test_model_not_saved_on_backdrop_failure(self,
+                                                 mock_create_dataset,
                                                  mock_purge_varnish_cache):
         DataSet.objects.create(
             name='test_dataset',
@@ -348,21 +359,26 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 @mock.patch('requests.request')
 def test_purge_varnish_cache(mock_request):
     urls = set([
-        '/data-sets/ds1', # for the detail view, the rest are for list
+        '/data-sets/ds1',  # for the detail view, the rest are for list
         '/data-sets',
         '/data-sets?data-group=dg1',
         '/data-sets?data-group=dg1&data-type=dt1',
     ])
-    hosts = [u'localhost', u'stagecraft.perfplat.dev']    
+    with open("/var/apps/stagecraft/test_output", "a") as f:
+        f.write(str(settings.ALLOWED_HOSTS))
+    print settings.ALLOWED_HOSTS
+    hosts = [u'localhost', u'stagecraft.perfplat.dev']
     expected_calls = []
     for host in hosts:
         for url in urls:
-          expected_calls.append(mock.call(u'PURGE',
-                                          'http://pp-development-1.localdomain:7999{}'.format(url),
-                                          headers={u'Host': host}))
+            frontend_host = 'http://pp-development-1.localdomain:7999'
+            mocked_call = mock.call(u'PURGE',
+                                    '{0}{1}'.format(frontend_host, url),
+                                    headers={u'Host': host})
+            expected_calls.append(mocked_call)
 
     purge_varnish_cache(urls)
-    
+
     mock_request.assert_has_calls(expected_calls, any_order=True)
 
 
