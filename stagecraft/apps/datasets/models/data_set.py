@@ -54,7 +54,7 @@ def _get_url_fragments_for_list_view(data_set):
     filtered = filter_empty_parameters(parameter_pairs)
 
     query_strings = set('&'.join(pair) for pair in filtered)
-    # the following line solves a circular import problem
+    # we import here to avoid a circular import
     from stagecraft.apps.datasets.views import list as data_set_list
     base_url = urlresolvers.reverse(data_set_list)
     url_fragments = ['{}?{}'.format(base_url, qs)
@@ -64,7 +64,7 @@ def _get_url_fragments_for_list_view(data_set):
 
 
 def _get_url_fragments_for_detail_view(data_set):
-    # the following line solves a circular import problem
+    # we import here to avoid a circular import
     from stagecraft.apps.datasets.views import detail as data_set_detail
     base_url = urlresolvers.reverse(
         data_set_detail, kwargs={'name': data_set.name})
@@ -80,7 +80,7 @@ def purge_varnish_cache(url_fragments):
     _, _, ip_addrs = gethostbyname_ex('frontend')
     frontend_host_names = [gethostbyaddr(ip_addr)[0] for ip_addr in ip_addrs]
 
-    hosts_for_headers = settings.ALLOWED_HOSTS
+    hosts_for_headers = settings.HOSTS_TO_PURGE
 
     for frontend_host_name in frontend_host_names:
         urls = ['http://{}:7999{}'.format(frontend_host_name, url_fragment)
@@ -91,12 +91,6 @@ def purge_varnish_cache(url_fragments):
 
             for url in urls:
                 resp = requests.request('PURGE', url, headers=headers)
-
-    #if env_name == 'production':
-
-    #run("curl -v -H 'Host: stagecraft.{}.performance.service.gov.uk' "
-    #"-X PURGE 'http://{}:7999{}'".format(
-    #    env.environment, host_name, path.strip()))
 
 
 @python_2_unicode_compatible

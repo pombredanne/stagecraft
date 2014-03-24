@@ -26,6 +26,11 @@ ALLOWED_HOSTS = [  # required if DEBUG is False
     'stagecraft.perfplat.dev',
 ]
 
+HOSTS_TO_PURGE = [
+    'localhost',
+    'stagecraft.perfplat.dev',
+]
+
 # Application definition
 
 INSTALLED_APPS += (

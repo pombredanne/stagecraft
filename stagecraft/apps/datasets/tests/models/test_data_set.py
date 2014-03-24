@@ -359,14 +359,11 @@ class BackdropIntegrationTestCase(TransactionTestCase):
 @mock.patch('requests.request')
 def test_purge_varnish_cache(mock_request):
     urls = set([
-        '/data-sets/ds1',  # for the detail view, the rest are for list
+        '/data-sets/ds1',  # for detail view (the rest are for list view)
         '/data-sets',
         '/data-sets?data-group=dg1',
         '/data-sets?data-group=dg1&data-type=dt1',
     ])
-    with open("/var/apps/stagecraft/test_output", "a") as f:
-        f.write(str(settings.ALLOWED_HOSTS))
-    print settings.ALLOWED_HOSTS
     hosts = [u'localhost', u'stagecraft.perfplat.dev']
     expected_calls = []
     for host in hosts:
@@ -388,7 +385,7 @@ def test_get_data_set_urls():
     data_set = DataSet(name='ds1', data_group=dg, data_type=dt)
 
     expected_urls = set([
-        '/data-sets/ds1',  # for the detail view, the rest are for list
+        '/data-sets/ds1',  # for detail view (the rest are for list view)
         '/data-sets',
         '/data-sets?data-group=dg1',
         '/data-sets?data-group=dg1&data-type=dt1',
