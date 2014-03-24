@@ -170,12 +170,13 @@ class DataSet(models.Model):
         is_insert = self.pk is None
         super(DataSet, self).save(*args, **kwargs)
         size_bytes = self.capped_size if self.is_capped else 0
-        purge_varnish_cache(get_data_set_url_fragments(self))  # MOVE ME DOWN!!
 
         # Backdrop can't be rolled back dude.
         # Ensure this is the final action of the save method.
         if is_insert:
             create_dataset(self.name, size_bytes)
+        else:
+            purge_varnish_cache(get_data_set_url_fragments(self))
 
     @property
     def is_capped(self):

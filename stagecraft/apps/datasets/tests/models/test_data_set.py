@@ -333,10 +333,13 @@ class BackdropIntegrationTestCase(TransactionTestCase):
     @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     def test_backdrop_not_called_on_model_save_failure(
             self,
-            mock_get_or_create,
+            mock_purge_varnish_cache,
             mock_create_dataset,
-            mock_purge_varnish_cache):
+            mock_get_or_create):
 
+        print mock_get_or_create
+        print mock_create_dataset
+        print mock_purge_varnish_cache
         mock_get_or_create.side_effect = Exception("My first fake db error")
 
         assert_raises(
@@ -391,6 +394,7 @@ class BackdropIntegrationTestCase(TransactionTestCase):
         data_set.save()
 
         mock_create_dataset.assert_called_once_with('test_dataset', 0)
+
 
 @mock.patch('requests.request')
 def test_purge_varnish_cache(mock_request):
