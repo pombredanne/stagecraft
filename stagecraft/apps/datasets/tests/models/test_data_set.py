@@ -39,7 +39,9 @@ class DataSetTestCase(TestCase):
         cls.data_type2.delete()
 
     @disable_backdrop_connection
-    def test_data_set_name_must_be_unique(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_data_set_name_must_be_unique(self,
+                                          mock_purge_varnish_cache):
         a = DataSet.objects.create(
             name='foo',
             data_group=self.data_group1,
@@ -54,7 +56,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ValidationError, lambda: b.validate_unique())
 
     @disable_backdrop_connection
-    def test_data_group_data_type_combo_must_be_unique(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_data_group_data_type_combo_must_be_unique(
+            self, mock_purge_varnish_cache):
         data_set1 = DataSet.objects.create(
             name='data_set1',
             data_group=self.data_group1,
@@ -69,7 +73,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ValidationError, lambda: data_set2.validate_unique())
 
     @disable_backdrop_connection
-    def test_name_cannot_be_changed(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_name_cannot_be_changed(self,
+                                    mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -79,14 +85,18 @@ class DataSetTestCase(TestCase):
         assert_raises(ImmutableFieldError, data_set.save)
 
     @disable_backdrop_connection
-    def test_name_can_be_set_on_creation(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_name_can_be_set_on_creation(self,
+                                         mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='Barney',
             data_group=self.data_group1,
             data_type=self.data_type1)
 
     @disable_backdrop_connection
-    def test_capped_size_cannot_be_changed(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_capped_size_cannot_be_changed(self,
+                                           mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -96,7 +106,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ImmutableFieldError, data_set.save)
 
     @disable_backdrop_connection
-    def test_capped_size_can_be_set_on_creation(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_capped_size_can_be_set_on_creation(self,
+                                                mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -104,7 +116,9 @@ class DataSetTestCase(TestCase):
             capped_size=42)
 
     @disable_backdrop_connection
-    def test_cant_delete_data_set(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_cant_delete_data_set(self,
+                                  mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -113,7 +127,9 @@ class DataSetTestCase(TestCase):
         assert_raises(DeleteNotImplementedError, lambda: data_set.delete())
 
     @disable_backdrop_connection
-    def test_cant_delete_referenced_data_group(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_cant_delete_referenced_data_group(self,
+                                               mock_purge_varnish_cache):
         refed_data_group = DataGroup.objects.create(name='refed_data_group')
         data_set = DataSet.objects.create(
             name='data_set',
@@ -123,7 +139,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ProtectedError, lambda: refed_data_group.delete())
 
     @disable_backdrop_connection
-    def test_cant_delete_referenced_data_type(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_cant_delete_referenced_data_type(self,
+                                              mock_purge_varnish_cache):
         refed_data_type = DataType.objects.create(name='refed_data_type')
         data_set = DataSet.objects.create(
             name='data_set',
@@ -133,7 +151,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ProtectedError, lambda: refed_data_type.delete())
 
     @disable_backdrop_connection
-    def test_bearer_token_defaults_to_blank(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_bearer_token_defaults_to_blank(self,
+                                            mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -141,7 +161,9 @@ class DataSetTestCase(TestCase):
         assert_equal('', data_set.bearer_token)
 
     @disable_backdrop_connection
-    def test_that_empty_bearer_token_serializes_to_null(self):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_that_empty_bearer_token_serializes_to_null(
+            self, mock_purge_varnish_cache):
         data_set = DataSet.objects.create(
             name='data_set',
             data_group=self.data_group1,
@@ -150,7 +172,9 @@ class DataSetTestCase(TestCase):
         assert_equal(None, data_set.serialize()['bearer_token'])
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     def test_clean_raise_immutablefield_name_change(self,
+                                                    mock_purge_varnish_cache,
                                                     mock_create_dataset):
         data_set = DataSet.objects.create(
             name='test_dataset',
@@ -160,8 +184,9 @@ class DataSetTestCase(TestCase):
         assert_raises(ImmutableFieldError, lambda: data_set.clean())
 
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_clean_raise_immutablefield_cappedsize_change(self,
-                                                          mock_create_dataset):
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
+    def test_clean_raise_immutablefield_cappedsize_change(
+            self, mock_purge_varnish_cache, mock_create_dataset):
         data_set = DataSet.objects.create(
             name='test_dataset',
             data_group=self.data_group1,
@@ -169,18 +194,20 @@ class DataSetTestCase(TestCase):
         data_set.capped_size = 1000
         assert_raises(ImmutableFieldError, lambda: data_set.clean())
 
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_clean_not_raise_immutablefield_no_change(self,
-                                                      mock_create_dataset):
+    def test_clean_not_raise_immutablefield_no_change(
+            self, mock_purge_varnish_cache, mock_create_dataset):
         data_set = DataSet.objects.create(
             name='test_dataset',
             data_group=self.data_group1,
             data_type=self.data_type1)
         data_set.clean()
 
+    @mock.patch('stagecraft.apps.datasets.models.data_set.purge_varnish_cache')
     @mock.patch('stagecraft.apps.datasets.models.data_set.create_dataset')
-    def test_clean_not_raise_immutablefield_normal_change(self,
-                                                          mock_create_dataset):
+    def test_clean_not_raise_immutablefield_normal_change(
+            self, mock_purge_varnish_cache, mock_create_dataset):
         new_data_type = DataType.objects.create(name='new_data_type')
         data_set = DataSet.objects.create(
             name='test_dataset',
