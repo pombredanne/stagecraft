@@ -185,6 +185,8 @@ class DataSet(models.Model):
                 and self.capped_size > 0)
 
     def delete(self, *args, **kwargs):
+        # TODO: remember to purge the Varnish cache when we implement this
+        #purge_varnish_cache(get_data_set_url_fragments(self))
         raise DeleteNotImplementedError("Data Sets cannot be deleted")
 
     class Meta:
