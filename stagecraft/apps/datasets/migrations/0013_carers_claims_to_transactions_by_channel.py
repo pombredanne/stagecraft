@@ -8,8 +8,10 @@ from django.db.models import Q
 from django.conf import settings
 
 import pprint as pp
+import random
 import json
 from performanceplatform.client import DataSet as client
+BEARER_TOKEN_LENGTH = 64
 
 base_url = 'https://www.preview.performance.service.gov.uk'
 
@@ -41,9 +43,16 @@ def _get_output_data_set(token=None):
 
 
 def _generate_bearer_token():
+    """
+    >>> len(_generate_bearer_token()) == BEARER_TOKEN_LENGTH
+    True
+    >>> import re
+    >>> regex = re.compile("^[(a|b|c|d|e|f|g|h|j|k|m|n|p|q|r|s|t|u|v|w|x|y|z|2|3|4|5|6|7|8|9)]{10,}$")
+    >>> type(regex.match(_generate_bearer_token()))
+    <type '_sre.SRE_Match'>
+    """
     chars = "abcdefghjkmnpqrstuvwxyz23456789"
-    token = "".join(map(random.choice, repeat(chars, BEARER_TOKEN_LENGTH)))
-    print('generated token {}'.format(token))
+    token = "".join(random.choice(chars) for _ in range(BEARER_TOKEN_LENGTH))
     return token
 
 
@@ -98,7 +107,7 @@ def get_or_create_carers_transactions_by_channel(orm):
             name=output_set
         )
     except orm['datasets.DataSet'].DoesNotExist:
-        by_transaction = orm['datasets.DataSet'].create(
+        by_transaction = orm['datasets.DataSet'].objects.create(
             name=output_set,
             data_group='carers-allowance',
             data_type='transactions-by-channel',
@@ -114,154 +123,156 @@ def get_or_create_carers_transactions_by_channel(orm):
 class Migration(DataMigration):
 
     def forwards(self, orm):
-        get_or_create_carers_transactions_by_channel(orm)
-        post_docs_to_production(
-            build_documents(
-                get_data_from_claims_sets()
-            )
-        )
+        pass
+        #get_or_create_carers_transactions_by_channel(orm)
+        #post_docs_to_production(
+            #build_documents(
+                #get_data_from_claims_sets()
+            #)
+        #)
 
     def backwards(self, orm):
-        "Write your backwards methods here."
-        clear_docs_from_output_set()
+        pass
+        #"Write your backwards methods here."
+        #clear_docs_from_output_set()
 
-    models = {
-        u'datasets.backdropuser': {
-            'Meta': {'ordering': "[u'email']", 'object_name': 'BackdropUser'},
-            'data_sets': (
-                'django.db.models.fields.related.ManyToManyField',
-                [],
-                {
-                    'to': u"orm['datasets.DataSet']",
-                    'symmetrical': 'False',
-                    'blank': 'True'
-                }
-            ),
-            'email': (
-                'django.db.models.fields.EmailField',
-                [],
-                {
-                    'unique': 'True',
-                    'max_length': '254'
-                }
-            ),
-            u'id': (
-                'django.db.models.fields.AutoField',
-                [],
-                {
-                    'primary_key': 'True'
-                }
-            )
-        },
-        u'datasets.datagroup': {
-            'Meta': {'ordering': "[u'name']", 'object_name': 'DataGroup'},
-            u'id': (
-                'django.db.models.fields.AutoField',
-                [],
-                {
-                    'primary_key': 'True'
-                }
-            ),
-            'name': (
-                'django.db.models.fields.SlugField',
-                [],
-                {
-                    'unique': 'True',
-                    'max_length': '50'
-                }
-            )
-        },
-        u'datasets.dataset': {
-            'Meta': {
-                'ordering': "[u'name']",
-                'unique_together': "([u'data_group', u'data_type'],)",
-                'object_name': 'DataSet'
-            },
-            'auto_ids': (
-                'django.db.models.fields.TextField', [], {'blank': 'True'
-                                                          }
-            ),
-            'bearer_token': (
-                'django.db.models.fields.CharField',
-                [],
-                {
-                    'default': "u''",
-                    'max_length': '255',
-                    'blank': 'True'
-                }
-            ),
-            'capped_size': (
-                'django.db.models.fields.PositiveIntegerField',
-                [],
-                {
-                    'default': 'None',
-                    'null': 'True',
-                    'blank': 'True'
-                }
-            ),
-            'created': (
-                'django.db.models.fields.DateTimeField',
-                [],
-                {
-                    'auto_now_add': 'True', 'blank': 'True'
-                }
-            ),
-            'data_group': (
-                'django.db.models.fields.related.ForeignKey',
-                [],
-                {
-                    'to': u"orm['datasets.DataGroup']",
-                    'on_delete': 'models.PROTECT'
-                }
-            ),
-            'data_type': (
-                'django.db.models.fields.related.ForeignKey',
-                [],
-                {
-                    'to': u"orm['datasets.DataType']",
-                    'on_delete': 'models.PROTECT'
-                }
-            ),
-            u'id': ('django.db.models.fields.AutoField', [], {
-                'primary_key': 'True'
-            }),
-            'max_age_expected': (
-                'django.db.models.fields.PositiveIntegerField',
-                [],
-                {
-                    'default': '86400',
-                    'null': 'True',
-                    'blank': 'True'
+    #models = {
+        #u'datasets.backdropuser': {
+            #'Meta': {'ordering': "[u'email']", 'object_name': 'BackdropUser'},
+            #'data_sets': (
+                #'django.db.models.fields.related.ManyToManyField',
+                #[],
+                #{
+                    #'to': u"orm['datasets.DataSet']",
+                    #'symmetrical': 'False',
+                    #'blank': 'True'
+                #}
+            #),
+            #'email': (
+                #'django.db.models.fields.EmailField',
+                #[],
+                #{
+                    #'unique': 'True',
+                    #'max_length': '254'
+                #}
+            #),
+            #u'id': (
+                #'django.db.models.fields.AutoField',
+                #[],
+                #{
+                    #'primary_key': 'True'
+                #}
+            #)
+        #},
+        #u'datasets.datagroup': {
+            #'Meta': {'ordering': "[u'name']", 'object_name': 'DataGroup'},
+            #u'id': (
+                #'django.db.models.fields.AutoField',
+                #[],
+                #{
+                    #'primary_key': 'True'
+                #}
+            #),
+            #'name': (
+                #'django.db.models.fields.SlugField',
+                #[],
+                #{
+                    #'unique': 'True',
+                    #'max_length': '50'
+                #}
+            #)
+        #},
+        #u'datasets.dataset': {
+            #'Meta': {
+                #'ordering': "[u'name']",
+                #'unique_together': "([u'data_group', u'data_type'],)",
+                #'object_name': 'DataSet'
+            #},
+            #'auto_ids': (
+                #'django.db.models.fields.TextField', [], {'blank': 'True'
+                                                          #}
+            #),
+            #'bearer_token': (
+                #'django.db.models.fields.CharField',
+                #[],
+                #{
+                    #'default': "u''",
+                    #'max_length': '255',
+                    #'blank': 'True'
+                #}
+            #),
+            #'capped_size': (
+                #'django.db.models.fields.PositiveIntegerField',
+                #[],
+                #{
+                    #'default': 'None',
+                    #'null': 'True',
+                    #'blank': 'True'
+                #}
+            #),
+            #'created': (
+                #'django.db.models.fields.DateTimeField',
+                #[],
+                #{
+                    #'auto_now_add': 'True', 'blank': 'True'
+                #}
+            #),
+            #'data_group': (
+                #'django.db.models.fields.related.ForeignKey',
+                #[],
+                #{
+                    #'to': u"orm['datasets.DataGroup']",
+                    #'on_delete': 'models.PROTECT'
+                #}
+            #),
+            #'data_type': (
+                #'django.db.models.fields.related.ForeignKey',
+                #[],
+                #{
+                    #'to': u"orm['datasets.DataType']",
+                    #'on_delete': 'models.PROTECT'
+                #}
+            #),
+            #u'id': ('django.db.models.fields.AutoField', [], {
+                #'primary_key': 'True'
+            #}),
+            #'max_age_expected': (
+                #'django.db.models.fields.PositiveIntegerField',
+                #[],
+                #{
+                    #'default': '86400',
+                    #'null': 'True',
+                    #'blank': 'True'
 
-                }
-            ),
-            'modified': ('django.db.models.fields.DateTimeField', [],
-                         {'auto_now': 'True', 'blank': 'True'}),
-            'name': ('django.db.models.fields.SlugField', [],
-                     {'unique': 'True', 'max_length': '200'}),
-            'published': ('django.db.models.fields.BooleanField', [],
-                          {'default': 'False'}),
-            'queryable': ('django.db.models.fields.BooleanField', [],
-                          {'default': 'True'}),
-            'raw_queries_allowed': ('django.db.models.fields.BooleanField', [],
-                                    {'default': 'True'}),
-            'realtime': ('django.db.models.fields.BooleanField', [],
-                         {'default': 'False'}),
-            'upload_filters': ('django.db.models.fields.TextField', [],
-                               {'blank': 'True'}),
-            'upload_format': ('django.db.models.fields.CharField', [],
-                              {'max_length': '255', 'blank': 'True'})
-        },
-        u'datasets.datatype': {
-            'Meta': {'ordering': "[u'name']", 'object_name': 'DataType'},
-            'description': ('django.db.models.fields.TextField', [],
-                            {'blank': 'True'}),
-            u'id': ('django.db.models.fields.AutoField', [],
-                    {'primary_key': 'True'}),
-            'name': ('django.db.models.fields.SlugField', [],
-                     {'unique': 'True', 'max_length': '50'})
-        }
-    }
+                #}
+            #),
+            #'modified': ('django.db.models.fields.DateTimeField', [],
+                         #{'auto_now': 'True', 'blank': 'True'}),
+            #'name': ('django.db.models.fields.SlugField', [],
+                     #{'unique': 'True', 'max_length': '200'}),
+            #'published': ('django.db.models.fields.BooleanField', [],
+                          #{'default': 'False'}),
+            #'queryable': ('django.db.models.fields.BooleanField', [],
+                          #{'default': 'True'}),
+            #'raw_queries_allowed': ('django.db.models.fields.BooleanField', [],
+                                    #{'default': 'True'}),
+            #'realtime': ('django.db.models.fields.BooleanField', [],
+                         #{'default': 'False'}),
+            #'upload_filters': ('django.db.models.fields.TextField', [],
+                               #{'blank': 'True'}),
+            #'upload_format': ('django.db.models.fields.CharField', [],
+                              #{'max_length': '255', 'blank': 'True'})
+        #},
+        #u'datasets.datatype': {
+            #'Meta': {'ordering': "[u'name']", 'object_name': 'DataType'},
+            #'description': ('django.db.models.fields.TextField', [],
+                            #{'blank': 'True'}),
+            #u'id': ('django.db.models.fields.AutoField', [],
+                    #{'primary_key': 'True'}),
+            #'name': ('django.db.models.fields.SlugField', [],
+                     #{'unique': 'True', 'max_length': '50'})
+        #}
+    #}
 
-    complete_apps = ['datasets']
-    symmetrical = True
+    #complete_apps = ['datasets']
+    #symmetrical = True
