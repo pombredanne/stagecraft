@@ -119,6 +119,25 @@ def get_or_create_carers_transactions_by_channel(orm):
         )
         return by_transaction
 
+transaction_by_channel_data_set_mappings = [
+        {
+            'old_name': "some_name",
+            'new_data_set': {
+                    'some_attribute': "a",
+                    'name': "b"
+                },
+            'data_mapping': {
+                    'key_mapping': {
+                            "key": "channel",
+                            "value": "count"
+                        },
+                    'value_mapping': {
+                            "ca_clerical_received": "paper",
+                            "ca_e_claims_received": "digital"
+                        }
+                }
+        }
+    ]
 
 class Migration(DataMigration):
 
@@ -126,7 +145,7 @@ class Migration(DataMigration):
         #non destructive - the old ones hang around in case there is a problem
         #and we need to roll back.
         for mapping in transaction_by_channel_data_set_mappings:
-            migrate_data_set(mapping['old_name'], mapping['new_data_set'], data_mapping)
+            migrate_data_set(mapping['old_name'], mapping['new_data_set'], mapping["data_mapping"])
 
     def backwards(self, orm):
         for mapping in transaction_by_channel_data_set_mappings:
