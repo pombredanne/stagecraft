@@ -9,9 +9,10 @@
 #import reversion
 
 
-class CopyDatasetWithNewMapping(object):
+#should be in model? should be imported differently (not in init)?
+#should pass in whole mapping?
+def migrate_data_set(old_name, changed_attributes, data_mapping):
     pass
-
     #base_url = 'https://www.preview.performance.service.gov.uk'
 
     #input_sets = [
