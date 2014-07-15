@@ -1,3 +1,4 @@
+import reversion
 #from __future__ import unicode_literals
 
 #import pprint as pp
@@ -11,8 +12,41 @@
 
 #should be in model? should be imported differently (not in init)?
 #should pass in whole mapping?
+@reversion.create_revision()
 def migrate_data_set(old_name, changed_attributes, data_mapping):
-    pass
+    #refactor to use group and type not names
+    existing_data_set = get_existing_data_set(old_name)
+    new_data_set_attributes = get_new_attributes(existing_data_set.serialize(), changed_attributes)
+    new_data_set = get_or_create_new_data_set(new_data_set_attributes)
+    old_data = get_old_data(old_name)
+    new_data = convert_old_data(old_data, data_mapping)
+    post_new_data(new_data_set.name, new_data)
+
+def get_existing_data_set(old_name):
+    return DataSet.objects.get(name=old_name)
+
+def get_new_attributes(existing_attributes, changed_attributes):
+    """
+    >>> existing_attributes = {'a': 1, 'b': 2, 'c': 3}
+    >>> changed_attributes = {'a': 6, 'c': 'x,y'}
+    >>> get_new_attributes(existing_attributes, changed_attributes)
+    {'a': 6, 'c': 'x,y', 'b': 2}
+    """
+    return dict(existing_attributes.items() + changed_attributes.items())
+
+def get_or_create_new_data_set(new_attributes):
+    (obj, new) = DataSet.objects.get_or_create(name=new_attributes['name'])
+    if new:
+        self.stdout.write("Created {} called '{}'".format(
+            type(DataSet), name))
+    data_type = DataType.objects.get(new_attributes['data_type'])
+    data_group = DataType.objects.get(new_attributes['data_group'])
+    new_attributes['data_type'] = data_type.id
+    new_attributes['data_group'] = data_group.id
+    return DataSet.objects.filter(name = obj.name).update(new_attributes)[0]; 
+
+
+
     #base_url = 'https://www.preview.performance.service.gov.uk'
 
     #input_sets = [
@@ -21,17 +55,6 @@ def migrate_data_set(old_name, changed_attributes, data_mapping):
     #]
 
     #output_set = 'carers_allowance_transactions_by_channel'
-
-    #key_mapping = {
-        #"key": "channel",
-        #"value": "count"
-    #}
-
-    #value_mapping = {
-        #"ca_clerical_received": "paper",
-        #"ca_e_claims_received": "digital"
-    #}
-
 
     #def _get_output_data_set(token=None):
         #data_set = client.from_name(base_url, output_set)
@@ -100,24 +123,6 @@ def migrate_data_set(old_name, changed_attributes, data_mapping):
         #data_set = _get_output_data_set()
         #data_set.empty_data_set()
 
-
-    #def get_or_create_carers_transactions_by_channel(orm):
-        #try:
-            #return orm['datasets.DataSet'].objects.get(
-                #name=output_set
-            #)
-        #except orm['datasets.DataSet'].DoesNotExist:
-            #by_transaction = orm['datasets.DataSet'].objects.create(
-                #name=output_set,
-                #data_group='carers-allowance',
-                #data_type='transactions-by-channel',
-                #bearer_token=_generate_bearer_token(),
-                #upload_format='excel',
-                #upload_filters='backdrop.core.upload.filters.first_sheet_filter',
-                #max_age_expected=2678400,
-                #published=True
-            #)
-            #return by_transaction
 
     #def map_one_to_one_fields(mapping, pairs):
         #"""
