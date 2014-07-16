@@ -10,14 +10,17 @@ from django.conf import settings
 def migrate_data_set(old_name, changed_attributes, data_mapping):
     #refactor to use group and type not names
     existing_data_set = get_existing_data_set(old_name)
-    new_data_set_attributes = get_new_attributes(existing_data_set.serialize(), changed_attributes)
+    new_data_set_attributes = get_new_attributes(
+        existing_data_set.serialize(), changed_attributes)
     new_data_set = get_or_create_new_data_set(new_data_set_attributes)
     old_data = get_old_data(old_name)
     new_data = convert_old_data(old_data, data_mapping)
     post_new_data(new_data_set.name, new_data)
 
+
 def get_existing_data_set(old_name):
     return DataSet.objects.get(name=old_name)
+
 
 def get_new_attributes(existing_attributes, changed_attributes):
     """
@@ -28,10 +31,14 @@ def get_new_attributes(existing_attributes, changed_attributes):
     """
     return dict(existing_attributes.items() + changed_attributes.items())
 
+
 def get_or_create_new_data_set(new_attributes):
-    (data_type, new) = DataType.objects.get_or_create(name=new_attributes.pop('data_type'))
-    (data_group, new) = DataGroup.objects.get_or_create(name=new_attributes.pop('data_group'))
-    (obj, new) = DataSet.objects.get_or_create(data_type=data_type, data_group=data_group)
+    (data_type, new) = DataType.objects.get_or_create(
+        name=new_attributes.pop('data_type'))
+    (data_group, new) = DataGroup.objects.get_or_create(
+        name=new_attributes.pop('data_group'))
+    (obj, new) = DataSet.objects.get_or_create(
+        data_type=data_type, data_group=data_group)
     new_attributes['data_type'] = data_type
     new_attributes['data_group'] = data_group
     del new_attributes['schema']
@@ -69,7 +76,8 @@ def convert_old_data(old_data, data_mapping):
     key_mapping = data_mapping['key_mapping']
     value_mapping = data_mapping['value_mapping']
     for document in old_data:
-        doc = apply_new_values(apply_new_key_mappings(document, key_mapping), value_mapping)
+        doc = apply_new_values(
+            apply_new_key_mappings(document, key_mapping), value_mapping)
         new_data.append(doc)
 
     return new_data
