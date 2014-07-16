@@ -1,31 +1,46 @@
 # -*- coding: utf-8 -*-
 from south.utils import datetime_utils as datetime
 from south.db import db
-from south.v2 import SchemaMigration
+from south.v2 import DataMigration
 from django.db import models
+from stagecraft.libs.mass_update import migrate_data_set
+
+transaction_by_channel_data_set_mappings = [
+        {
+            'old_name': "carers_allowance_weekly_claims",
+            'new_data_set': {
+                    'auto_ids': '_timestamp,channel',
+                    'date_group': "carers-allowance",
+                    'date_type': "transactions-by-channel"
+                },
+            #question - should also change values? cliff is finding out
+            'data_mapping': {
+                    'key_mapping': {
+                            "key": "channel",
+                            "value": "count"
+                        },
+                    'value_mapping': {
+                        }
+                }
+        },
+        {
+            'old_name': "lpa_volumes",
+            'new_data_set': {
+                'data_group': "lasting-power-of-attorney",
+                'data_type': "transactions-by-channel",
+                'auto_ids': "_timestamp,channel",
+            },
+            'data_mapping': {
+                'key_mapping': {
+                   "key": "channel",
+                   "value": "count"
+                },
+            }
+        }
+    ]
+
 
 class Migration(DataMigration):
-
-    transaction_by_channel_data_set_mappings = [
-            {
-                'old_name': "carers_allowance_weekly_claims",
-                'new_data_set': {
-                        'auto_ids': '_timestamp,channel',
-                        'date_group': "carers-allowance",
-                        'date_type': "transactions-by-channel"
-                    },
-                #question - should also change values? cliff is finding out
-                'data_mapping': {
-                        'key_mapping': {
-                                "key": "channel",
-                                "value": "count"
-                            },
-                        'value_mapping': {
-                            }
-                    }
-            }
-        ]
-
 
     def forwards(self, orm):
         #non destructive - the old ones hang around in case there is a problem
