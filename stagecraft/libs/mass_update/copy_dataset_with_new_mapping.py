@@ -10,6 +10,8 @@ from django.conf import settings
 def migrate_data_set(old_name, changed_attributes, data_mapping):
     #refactor to use group and type not names
     existing_data_set = get_existing_data_set(old_name)
+    if not existing_data_set:
+        return False
     new_data_set_attributes = get_new_attributes(
         existing_data_set.serialize(), changed_attributes)
     new_data_set = get_or_create_new_data_set(new_data_set_attributes)
@@ -19,7 +21,7 @@ def migrate_data_set(old_name, changed_attributes, data_mapping):
 
 
 def get_existing_data_set(old_name):
-    return DataSet.objects.get(name=old_name)
+    return DataSet.objects.filter(name=old_name).first()
 
 
 def get_new_attributes(existing_attributes, changed_attributes):
