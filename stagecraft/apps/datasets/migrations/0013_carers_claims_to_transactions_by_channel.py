@@ -8,19 +8,19 @@ class Migration(DataMigration):
 
     transaction_by_channel_data_set_mappings = [
             {
-                'old_name': "some_name",
+                'old_name': "carers_allowance_weekly_claims",
                 'new_data_set': {
-                        'some_attribute': "a",
-                        'name': "b"
+                        'auto_ids': '_timestamp,channel',
+                        'date_group': "carers-allowance",
+                        'date_type': "transactions-by-channel"
                     },
+                #question - should also change values? cliff is finding out
                 'data_mapping': {
                         'key_mapping': {
                                 "key": "channel",
                                 "value": "count"
                             },
                         'value_mapping': {
-                                "ca_clerical_received": "paper",
-                                "ca_e_claims_received": "digital"
                             }
                     }
             }
@@ -36,7 +36,8 @@ class Migration(DataMigration):
     def backwards(self, orm):
         for mapping in transaction_by_channel_data_set_mappings:
             orm['datasets.DataSet'].objects.get(
-                name=mapping['new_data_set']['name']
+                data_group=mapping['new_data_set']['data_group'],
+                data_type=mapping['new_data_set']['data_type']
             ).delete()
 
     models = {
