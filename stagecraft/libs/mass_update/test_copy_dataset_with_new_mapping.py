@@ -15,7 +15,6 @@ class TestDataSetMassUpdate(TestCase):
                 'old_name': "data-scootah",
                 'new_data_set': {
                         'data_type': "a_type",
-                        'name': "new_data_set",
                         'auto_ids': "foo,bar,baz",
                     },
                 'data_mapping': {
@@ -33,8 +32,8 @@ class TestDataSetMassUpdate(TestCase):
         self.data_set_mapping_new_exists = {
                 'old_name': "data-scootah",
                 'new_data_set': {
+                        'data_group': "mowers",
                         'data_type': "realtime",
-                        'name': "realtime-mowers",
                         'auto_ids': "foo,bar,baz",
                     },
                 'data_mapping': {
@@ -57,7 +56,7 @@ class TestDataSetMassUpdate(TestCase):
             u'data_group': u'scooters',
             u'data_type': u'a_type',
             u'max_age_expected': 86400,
-            u'name': u'new_data_set',
+            u'name': u'scooters_a_type',
             u'queryable': True,
             u'raw_queries_allowed': True,
             u'realtime': False,
@@ -66,20 +65,19 @@ class TestDataSetMassUpdate(TestCase):
             u'published': False,
         }
         self.new_dataset_config_already_exists = {
-            "auto_ids": "foo,bar,baz",
-            "bearer_token": "",
-            "capped_size": None,
-            "created": "2014-06-05 00:00:00",
-            "data_group": "mowers",
-            "data_type": "realtime",
-            "max_age_expected": 86400,
-            "modified": "2014-06-05 00:00:00",
-            "name": "realtime-mowers",
-            "queryable": True,
-            "raw_queries_allowed": True,
-            "realtime": False,
-            "upload_filters": "backdrop.filter.1",
-            "upload_format": ""
+            u'auto_ids': [u'foo', u'bar', u'baz'],
+            u'bearer_token': None,
+            u'capped_size': None,
+            u'data_group': u'mowers',
+            u'data_type': u'realtime',
+            u'max_age_expected': 86400,
+            u'name': u'realtime-mowers',
+            u'queryable': True,
+            u'raw_queries_allowed': True,
+            u'realtime': False,
+            u'upload_filters': [u"[u'backdrop.filter.1']"],
+            u'upload_format': u'',
+            u'published': False,
         }
 
         self.existing_data = {
@@ -150,12 +148,13 @@ class TestDataSetMassUpdate(TestCase):
     @mock.patch("performanceplatform.client.DataSet.get")
     @mock.patch("performanceplatform.client.DataSet.post")
     def test_correct_new_data_set_created(self, client_post, client_get):
-        client_get.return_value = self.existing_data
+        mock_get_response = mock.Mock()
+        mock_get_response.json.return_value = self.existing_data
+        client_get.return_value = mock_get_response
         migrate_data_set(self.data_set_mapping['old_name'],
                          self.data_set_mapping['new_data_set'],
                          self.data_set_mapping["data_mapping"])
-        client_post.assert_called_once_with(self.newly_mapped_data)
-        new_data_set = DataSet.objects.get(name='new_data_set')
+        new_data_set = DataSet.objects.get(name='scooters_a_type')
         new_data_set_serialised = dict(new_data_set.serialize())
         del new_data_set_serialised['schema']
         assert_equal(new_data_set_serialised, self.new_dataset_config)
@@ -165,18 +164,27 @@ class TestDataSetMassUpdate(TestCase):
     @mock.patch("performanceplatform.client.DataSet.get")
     @mock.patch("performanceplatform.client.DataSet.post")
     def test_handles_new_data_set_already_exists(self, client_post, client_get):
-        client_get.return_value = self.existing_data
+        mock_get_response = mock.Mock()
+        mock_get_response.json.return_value = self.existing_data
+        client_get.return_value = mock_get_response
         migrate_data_set(self.data_set_mapping_new_exists['old_name'],
                          self.data_set_mapping_new_exists['new_data_set'],
                          self.data_set_mapping_new_exists["data_mapping"])
-        client_post.assert_called_once_with(self.newly_mapped_data)
         new_data_set = DataSet.objects.get(name='realtime-mowers')
-        assert_equal(new_data_set.serialize(), self.new_dataset_config_already_exists)
+        new_data_set_serialised = dict(new_data_set.serialize())
+        del new_data_set_serialised['schema']
+        assert_equal(new_data_set_serialised, self.new_dataset_config_already_exists)
 
 
     @disable_backdrop_connection
     @disable_purge_varnish
-    def test_correct_data_posted_to_new_data_set_given_response(self):
-        pass
-
-
+    @mock.patch("performanceplatform.client.DataSet.get")
+    @mock.patch("performanceplatform.client.DataSet.post")
+    def test_correct_data_posted_to_new_data_set_given_response(self, client_post, client_get):
+        mock_get_response = mock.Mock()
+        mock_get_response.json.return_value = self.existing_data
+        client_get.return_value = mock_get_response
+        migrate_data_set(self.data_set_mapping['old_name'],
+                         self.data_set_mapping['new_data_set'],
+                         self.data_set_mapping["data_mapping"])
+        client_post.assert_called_once_with(self.newly_mapped_data['data'])

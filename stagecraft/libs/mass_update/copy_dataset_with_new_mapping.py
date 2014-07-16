@@ -1,13 +1,7 @@
 import reversion
-#from __future__ import unicode_literals
-
-#import pprint as pp
-#import random
-#import json
-#from performanceplatform.client import DataSet as client
-#BEARER_TOKEN_LENGTH = 64
+from performanceplatform.client import DataSet as client
 from stagecraft.apps.datasets.models import DataGroup, DataSet, DataType
-#import reversion
+from django.conf import settings
 
 
 #should be in model? should be imported differently (not in init)?
@@ -37,115 +31,51 @@ def get_new_attributes(existing_attributes, changed_attributes):
 def get_or_create_new_data_set(new_attributes):
     (data_type, new) = DataType.objects.get_or_create(name=new_attributes.pop('data_type'))
     (data_group, new) = DataGroup.objects.get_or_create(name=new_attributes.pop('data_group'))
-    (obj, new) = DataSet.objects.get_or_create(name=new_attributes.pop('name'),
-        data_type=data_type, data_group=data_group)
+    (obj, new) = DataSet.objects.get_or_create(data_type=data_type, data_group=data_group)
     new_attributes['data_type'] = data_type
     new_attributes['data_group'] = data_group
     del new_attributes['schema']
-    return DataSet.objects.filter(name=obj.name).update(**new_attributes)
+    del new_attributes['name']
+    data_set_to_update_queryset = DataSet.objects.filter(name=obj.name)
+    data_set_to_update_queryset.update(**new_attributes)
+    return data_set_to_update_queryset.first()
 
 
-
-    #base_url = 'https://www.preview.performance.service.gov.uk'
-
-    #input_sets = [
-        #'carers_allowance_monthly_claims',
-        #'carers_allowance_weekly_claims'
-    #]
-
-    #output_set = 'carers_allowance_transactions_by_channel'
-
-    #def _get_output_data_set(token=None):
-        #data_set = client.from_name(base_url, output_set)
-        #if token is not None:
-            #data_set.set_token(token)
-        #else:
-            #data_set.set_token(settings.STAGECRAFT_DATA_SET_QUERY_TOKEN)
-        #return data_set
+def get_old_data(old_data_set_name):
+    base_url = settings.BACKDROP_URL
+    data_set_client = client.from_name(base_url, old_data_set_name)
+    return data_set_client.get().json()['data']
 
 
-    #def _generate_bearer_token():
-        #"""
-        #>>> len(_generate_bearer_token()) == BEARER_TOKEN_LENGTH
-        #True
-        #>>> import re
-        #>>> regex = re.compile("^[(a|b|c|d|e|f|g|h|j|k|m|n|p|q|r|s|t|u|v|w|x|y|z|2|3|4|5|6|7|8|9)]{10,}$")
-        #>>> type(regex.match(_generate_bearer_token()))
-        #<type '_sre.SRE_Match'>
-        #"""
-        #chars = "abcdefghjkmnpqrstuvwxyz23456789"
-        #token = "".join(random.choice(chars) for _ in range(BEARER_TOKEN_LENGTH))
-        #return token
+def apply_new_key_mappings(document, key_mapping):
+    for key, val in document.items():
+        if key in key_mapping:
+            document.pop(key)
+            document[key_mapping[key]] = val
+        else:
+            document[key] = val
+    return document
 
 
-    #def get_data_from_claims_sets():
-        #input_data = []
-        #for set_name in input_sets:
-            #data_set = client.from_name(base_url, set_name)
-            #for item in data_set.get().json()['data']:
-                #input_data.append(item)
-        #return input_data
+def apply_new_values(document, value_mapping):
+    for key, val in document.items():
+        if val in value_mapping:
+            document[key] = value_mapping[val]
+    return document
 
 
-    #def apply_new_key_mappings(document):
-        #for key, val in document.items():
-            #if key in key_mapping:
-                #document.pop(key)
-                #document[key_mapping[key]] = val
-            #else:
-                #document[key] = val
-        #return document
+def convert_old_data(old_data, data_mapping):
+    new_data = []
+    key_mapping = data_mapping['key_mapping']
+    value_mapping = data_mapping['value_mapping']
+    for document in old_data:
+        doc = apply_new_values(apply_new_key_mappings(document, key_mapping), value_mapping)
+        new_data.append(doc)
+
+    return new_data
 
 
-    #def apply_new_values(document):
-        #for key, val in document.items():
-            #if val in value_mapping:
-                #document['comment'] = str(document['comment']) + " / " + val
-                #document[key] = value_mapping[val]
-        #return document
-
-
-    #def build_documents(documents):
-        #docs = []
-        #for document in documents:
-            #doc = apply_new_values(apply_new_key_mappings(document))
-            #docs.append(doc)
-        #return docs
-
-
-    #def post_docs_to_production(documents):
-        #data_set = _get_output_data_set()
-        #data_set.post(documents)
-
-
-    #def clear_docs_from_output_set():
-        #data_set = _get_output_data_set()
-        #data_set.empty_data_set()
-
-
-    #def map_one_to_one_fields(mapping, pairs):
-        #"""
-        #>>> mapping = {'a': 'b'}
-        #>>> pairs = {'a': 1}
-        #>>> map_one_to_one_fields(mapping, pairs)
-        #{'b': 1}
-        #>>> mapping = {'a': ['b', 'a']}
-        #>>> map_one_to_one_fields(mapping, pairs)
-        #{'a': 1, 'b': 1}
-        #"""
-        #mapped_pairs = dict()
-        #for key, value in pairs.items():
-            #if key in mapping:
-                #targets = mapping[key]
-                #if not isinstance(targets, list):
-                    #targets = list(targets)
-                #for target in targets:
-                    #mapped_pairs[target] = value
-            #else:
-                #mapped_pairs[key] = value
-
-        #return mapped_pairs
-
-    #def apply_mapping(mapping, pairs):
-        #logging.warn("{} -- {}".format(mapping, pairs))
-        #return dict(map_one_to_one_fields(mapping, pairs).items())
+def post_new_data(data_set_name, data):
+    base_url = settings.BACKDROP_URL
+    data_set_client = client.from_name(base_url, data_set_name)
+    return data_set_client.post(data)
