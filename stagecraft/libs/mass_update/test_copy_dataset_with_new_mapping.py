@@ -51,20 +51,19 @@ class TestDataSetMassUpdate(TestCase):
 
         #existing data set config comes from fixture
         self.new_dataset_config = {
-            "auto_ids": "foo,bar,baz",
-            "bearer_token": "",
-            "capped_size": None,
-            "created": "2014-06-05 00:00:00",
-            "data_group": "scooters",
-            "data_type": "a_type",
-            "max_age_expected": 86400,
-            "modified": "2014-06-05 00:00:00",
-            "name": "new_data_set",
-            "queryable": True,
-            "raw_queries_allowed": True,
-            "realtime": False,
-            "upload_filters": "backdrop.filter.1",
-            "upload_format": ""
+            u'auto_ids': [u'foo', u'bar', u'baz'],
+            u'bearer_token': None,
+            u'capped_size': None,
+            u'data_group': u'scooters',
+            u'data_type': u'a_type',
+            u'max_age_expected': 86400,
+            u'name': u'new_data_set',
+            u'queryable': True,
+            u'raw_queries_allowed': True,
+            u'realtime': False,
+            u'upload_filters': [u"[u'backdrop.filter.1']"],
+            u'upload_format': u'',
+            u'published': False,
         }
         self.new_dataset_config_already_exists = {
             "auto_ids": "foo,bar,baz",
@@ -157,7 +156,9 @@ class TestDataSetMassUpdate(TestCase):
                          self.data_set_mapping["data_mapping"])
         client_post.assert_called_once_with(self.newly_mapped_data)
         new_data_set = DataSet.objects.get(name='new_data_set')
-        assert_equal(new_data_set.serialize(), self.new_dataset_config)
+        new_data_set_serialised = dict(new_data_set.serialize())
+        del new_data_set_serialised['schema']
+        assert_equal(new_data_set_serialised, self.new_dataset_config)
 
     @disable_backdrop_connection
     @disable_purge_varnish

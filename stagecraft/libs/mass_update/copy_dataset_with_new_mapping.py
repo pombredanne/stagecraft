@@ -6,7 +6,7 @@ import reversion
 #import json
 #from performanceplatform.client import DataSet as client
 #BEARER_TOKEN_LENGTH = 64
-#from stagecraft.apps.datasets.models import DataGroup, DataSet, DataType
+from stagecraft.apps.datasets.models import DataGroup, DataSet, DataType
 #import reversion
 
 
@@ -35,15 +35,14 @@ def get_new_attributes(existing_attributes, changed_attributes):
     return dict(existing_attributes.items() + changed_attributes.items())
 
 def get_or_create_new_data_set(new_attributes):
-    (obj, new) = DataSet.objects.get_or_create(name=new_attributes['name'])
-    if new:
-        self.stdout.write("Created {} called '{}'".format(
-            type(DataSet), name))
-    data_type = DataType.objects.get(new_attributes['data_type'])
-    data_group = DataType.objects.get(new_attributes['data_group'])
-    new_attributes['data_type'] = data_type.id
-    new_attributes['data_group'] = data_group.id
-    return DataSet.objects.filter(name = obj.name).update(new_attributes)[0]; 
+    (data_type, new) = DataType.objects.get_or_create(name=new_attributes.pop('data_type'))
+    (data_group, new) = DataGroup.objects.get_or_create(name=new_attributes.pop('data_group'))
+    (obj, new) = DataSet.objects.get_or_create(name=new_attributes.pop('name'),
+        data_type=data_type, data_group=data_group)
+    new_attributes['data_type'] = data_type
+    new_attributes['data_group'] = data_group
+    del new_attributes['schema']
+    return DataSet.objects.filter(name=obj.name).update(**new_attributes)
 
 
 
