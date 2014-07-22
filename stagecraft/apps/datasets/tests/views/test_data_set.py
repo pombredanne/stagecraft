@@ -255,19 +255,23 @@ class DataSetsViewsTestCase(TestCase):
         assert_equal(
             self.client.get(
                 '/data-sets?data-type=type1',
-                HTTP_AUTHORIZATION='Bearer development-oauth-access-token').content,
+                HTTP_AUTHORIZATION='Bearer development-oauth-access-token'
+            ).content,
             self.client.get(
                 '/data-sets?data_type=type1',
-                HTTP_AUTHORIZATION='Bearer development-oauth-access-token').content
+                HTTP_AUTHORIZATION='Bearer development-oauth-access-token'
+            ).content
         )
 
         assert_equal(
             self.client.get(
                 '/data-sets?data-group=group1',
-                HTTP_AUTHORIZATION='Bearer development-oauth-access-token').content,
+                HTTP_AUTHORIZATION='Bearer development-oauth-access-token'
+            ).content,
             self.client.get(
                 '/data-sets?data_group=group1',
-                HTTP_AUTHORIZATION='Bearer development-oauth-access-token').content,
+                HTTP_AUTHORIZATION='Bearer development-oauth-access-token'
+            ).content,
         )
 
     def test_list_with_trailing_slash_redirects_correctly(self):
@@ -282,7 +286,8 @@ class DataSetsViewsTestCase(TestCase):
         assert_equal(
             self.client.get(
                 '/data-sets?data-type=type1',
-                HTTP_AUTHORIZATION='Bearer development-oauth-access-token').content,
+                HTTP_AUTHORIZATION='Bearer development-oauth-access-token'
+            ).content,
             self.client.get(
                 '/data-sets/?data-type=type1',
                 HTTP_AUTHORIZATION='Bearer development-oauth-access-token',
