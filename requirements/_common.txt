@@ -10,4 +10,4 @@ logstash_formatter==0.5.7
 psycopg2==2.5.2
 
 # For performing data operations that require speaking to backdrop
-performanceplatform-client==0.0.7
+performanceplatform-client==0.0.6
