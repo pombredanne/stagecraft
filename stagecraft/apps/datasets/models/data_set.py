@@ -13,8 +13,6 @@ from django.utils.encoding import python_2_unicode_compatible
 from stagecraft.apps.datasets.models.data_group import DataGroup
 from stagecraft.apps.datasets.models.data_type import DataType
 
-from stagecraft.libs.backdrop_client import (create_data_set, delete_data_set,
-                                             BackdropNotFoundError)
 from stagecraft.libs.schemas import get_schema
 
 from ..helpers.validators import data_set_name_validator
@@ -257,12 +255,6 @@ class DataSet(models.Model):
             self.name = self.generate_data_set_name()
         super(DataSet, self).save(*args, **kwargs)
 
-        if is_new:
-            size_bytes = self.capped_size if self.is_capped else 0
-            # Backdrop can't be rolled back dude.
-            # Ensure this is the final action of the save method.
-            create_data_set(self.name, size_bytes)
-
     def generate_data_set_name(self):
         return '_'.join((self.data_group.name,
                          self.data_type.name)).replace('-', '_')
@@ -272,20 +264,6 @@ class DataSet(models.Model):
         # Actually mongo's limit for cap size minimum is currently 4096 :-(
         return (self.capped_size is not None
                 and self.capped_size > 0)
-
-    def delete(self, *args, **kwargs):
-        try:
-            delete_data_set(self.name)
-        except BackdropNotFoundError:
-            # if the dataset doesn't exist in backdrop, safe to delete it from
-            # stagecraft
-            logger = logging.getLogger(__name__)
-            logger.warning(
-                'Deleting data_set {} that doesnt exist in backdrop'.format(
-                    self.name
-                )
-            )
-        super(DataSet, self).delete(*args, **kwargs)
 
     class Meta:
         app_label = 'datasets'
