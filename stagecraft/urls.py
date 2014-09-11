@@ -55,6 +55,12 @@ urlpatterns = patterns(
         permanent=True,
         query_string=True)),
     url(r'^module-type$', module_views.root_types),
+    url(r'^dashboard$'.format(uuid_regexp),
+        dashboard_views.create_dashboard, name='create_dashboard'),
+    url(r'^dashboard/$', RedirectView.as_view(
+        pattern_name='create_dashboard',
+        permanent=True,
+        query_string=True)),
     url(r'^dashboard/(?P<dashboard_id>{})/module$'.format(uuid_regexp),
         module_views.modules_on_dashboard),
     url(r'^dashboard/(?P<dashboard_id>{})$'.format(uuid_regexp),
