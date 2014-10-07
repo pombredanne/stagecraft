@@ -1,11 +1,14 @@
 #!/usr/bin/env python
 # encoding: utf-8
 
-from stagecraft.apps.dashboards.models.module import ModuleType
+from stagecraft.apps.dashboards.models.module import(
+    ModuleType,
+    Module)
 from dictdiffer import diff
 import os
 import json
 import pprint
+import jsonschema
 
 # run it like this:
 # workon/source the virtualenv
@@ -31,16 +34,24 @@ def get_schema_for_module_type(name):
 
 
 def check_module_type_schemas_correct():
+    all_correct = True
     for module_type, new_schema in module_types_with_proper_schemas():
         diffs = list(diff(module_type.schema, new_schema))
         print "======================================="
         if len(diffs) != 0:
+            all_correct = False
             print '{} differs'.format(module_type.name)
             pprint.pprint(diffs)
             print "NOT YET THE SAME!"
         else:
             print "SCHEMA OKAY"
         print "======================================="
+        try:
+            module_type.validate_schema()
+        except jsonschema.exceptions.SchemaError as e:
+            print jsonschema.validators.validator_for(module_type.schema).META_SCHEMA
+            import pdb; pdb.set_trace()
+        return all_correct
 
 
 def clear_module_type_schemas():
@@ -54,7 +65,7 @@ def update_module_type_with_correct_schemas():
 
 
 def update_module_type_schema(module_type, schema={}):
-    module_type.schema = json.dumps(schema)
+    module_type.schema = schema
     module_type.save()
 
 
@@ -65,9 +76,16 @@ def module_types_with_proper_schemas():
     ]
 
 
+def validate_all_modules():
+    for module in Module.objects.all():
+        jsonschema.validate(module.spotlightify(), module.type.schema)
+        return True
+
 if __name__ == '__main__':
+    clear_module_type_schemas()
     check_module_type_schemas_correct()
     update_module_type_with_correct_schemas()
-    check_module_type_schemas_correct()
+    all_correct = check_module_type_schemas_correct()
+    if all_correct:
+        validate_all_modules()
     print "what happens with dashboards.json yeah?"
-    #clear_module_type_schemas()
