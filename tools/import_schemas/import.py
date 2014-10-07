@@ -8,6 +8,8 @@ import json
 import pprint
 
 # run it like this:
+# workon/source the virtualenv
+# run export DJANGO_SETTINGS_MODULE=stagecraft.settings.production
 # python -m tools.import_schemas.import
 
 
@@ -28,13 +30,44 @@ def get_schema_for_module_type(name):
     return schema_dict
 
 
-if __name__ == '__main__':
-    for module_type in ModuleType.objects.all():
-        new_schema = get_schema_for_module_type(module_type.name)
+def check_module_type_schemas_correct():
+    for module_type, new_schema in module_types_with_proper_schemas():
         diffs = list(diff(module_type.schema, new_schema))
+        print "======================================="
         if len(diffs) != 0:
             print '{} differs'.format(module_type.name)
             pprint.pprint(diffs)
             print "NOT YET THE SAME!"
+        else:
+            print "SCHEMA OKAY"
         print "======================================="
-        print "what happens with dashboards.json yeah?"
+
+
+def clear_module_type_schemas():
+    for module_type, new_schema in module_types_with_proper_schemas():
+        update_module_type_schema(module_type, schema={})
+
+
+def update_module_type_with_correct_schemas():
+    for module_type, new_schema in module_types_with_proper_schemas():
+        update_module_type_schema(module_type, schema=new_schema)
+
+
+def update_module_type_schema(module_type, schema={}):
+    module_type.schema = json.dumps(schema)
+    module_type.save()
+
+
+def module_types_with_proper_schemas():
+    return [
+        (module_type, get_schema_for_module_type(module_type.name))
+        for module_type in ModuleType.objects.all()
+    ]
+
+
+if __name__ == '__main__':
+    check_module_type_schemas_correct()
+    update_module_type_with_correct_schemas()
+    check_module_type_schemas_correct()
+    print "what happens with dashboards.json yeah?"
+    #clear_module_type_schemas()
