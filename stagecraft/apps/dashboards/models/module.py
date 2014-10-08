@@ -66,6 +66,7 @@ class Module(models.Model):
 
     title = models.CharField(max_length=60)
     description = models.CharField(max_length=200, blank=True)
+    # this is "minItems": 1
     info = TextArrayField(blank=True)
 
     options = JSONField(blank=True)
