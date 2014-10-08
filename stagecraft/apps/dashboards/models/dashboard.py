@@ -8,6 +8,9 @@ def list_to_tuple_pairs(elements):
 
 
 class Dashboard(models.Model):
+    # there is a dashboard schema in spotlight. we should validate the result
+    # of spotlightify against this - don't forget!
+
     id = UUIDField(auto=True, primary_key=True, hyphenate=True)
     slug_validator = RegexValidator(
         '^[-a-z0-9]+$',
