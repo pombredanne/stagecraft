@@ -49,8 +49,9 @@ def check_module_type_schemas_correct():
         try:
             module_type.validate_schema()
         except jsonschema.exceptions.SchemaError as e:
-            print jsonschema.validators.validator_for(module_type.schema).META_SCHEMA
-            import pdb; pdb.set_trace()
+            print(
+                jsonschema.validators.validator_for(
+                    module_type.schema).META_SCHEMA)
         return all_correct
 
 
