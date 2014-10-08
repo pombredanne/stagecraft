@@ -74,7 +74,12 @@ class Module(models.Model):
     order = models.IntegerField()
 
     def validate_options(self):
-        jsonschema.validate(self.options, self.type.schema)
+        # temporarily removing this
+        # - it's not currently used as there are no schemas in production
+        # I want to reimplement this properly
+        # e.g. options is probably the wrong thing to validate.
+        # It should probably validate the result of spotlightify
+        #jsonschema.validate(self.options, self.type.schema)
         return True
 
     def validate_query_parameters(self):
