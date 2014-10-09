@@ -37,7 +37,7 @@ def check_module_type_schemas_correct():
     all_correct = True
     for module_type, new_schema in module_types_with_proper_schemas():
         diffs = list(diff(module_type.schema, new_schema))
-        print "======================================="
+        print "==============={}========================".format(module_type.name)
         if len(diffs) != 0:
             all_correct = False
             print '{} differs'.format(module_type.name)
@@ -49,10 +49,11 @@ def check_module_type_schemas_correct():
         try:
             module_type.validate_schema()
         except jsonschema.exceptions.SchemaError as e:
-            print(
-                jsonschema.validators.validator_for(
-                    module_type.schema).META_SCHEMA)
-        return all_correct
+            print "==============="
+            print module_type.name
+            print "==============="
+            raise e
+    return all_correct
 
 
 def clear_module_type_schemas():
@@ -71,15 +72,18 @@ def update_module_type_schema(module_type, schema={}):
 
 
 def module_types_with_proper_schemas():
-    return [
+    module_types_with_proper_schemas = [
         (module_type, get_schema_for_module_type(module_type.name))
         for module_type in ModuleType.objects.all()
     ]
+    return module_types_with_proper_schemas
 
 
 def validate_all_modules():
     for module in Module.objects.all():
-        jsonschema.validate(module.spotlightify(), module.type.schema)
+    #    import pdb; pdb.set_trace()
+        jsonschema.validate(module.options, module.type.schema)
+        print "MODULE OKAY!"
         return True
 
 if __name__ == '__main__':
