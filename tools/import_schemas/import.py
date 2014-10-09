@@ -24,6 +24,16 @@ def get_schema_for_module_type(name):
         with open(path, "r") as file:
             schema = file.read()
     except IOError as e:
+        print "ERROR"
+        print "ERROR"
+        print "ERROR"
+        print "ERROR"
+        print name
+        print "^ERROR"
+        print "ERROR"
+        print "ERROR"
+        print "ERROR"
+        print "ERROR"
         path = os.path.join(
             os.path.dirname(__file__),
             'schema/module_schema.json'.format(name))
@@ -80,11 +90,12 @@ def module_types_with_proper_schemas():
 
 
 def validate_all_modules():
+    #import pdb; pdb.set_trace()
     for module in Module.objects.all():
-    #    import pdb; pdb.set_trace()
+        print module.slug
         jsonschema.validate(module.options, module.type.schema)
         print "MODULE OKAY!"
-        return True
+    return True
 
 if __name__ == '__main__':
     clear_module_type_schemas()
