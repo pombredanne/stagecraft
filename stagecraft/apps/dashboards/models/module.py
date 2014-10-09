@@ -1,5 +1,6 @@
 import copy
 import jsonschema
+from jsonschema import Draft3Validator
 
 from django.core.validators import RegexValidator
 from django.db import models
@@ -36,7 +37,7 @@ class ModuleType(models.Model):
         app_label = 'dashboards'
 
     def validate_schema(self):
-        validator_for(self.schema).check_schema(self.schema)
+        validator_for(self.schema, Draft3Validator).check_schema(self.schema)
         return True
 
     def serialize(self):
@@ -80,7 +81,7 @@ class Module(models.Model):
         # I want to reimplement this properly
         # e.g. options is probably the wrong thing to validate.
         # It should probably validate the result of spotlightify
-        #jsonschema.validate(self.options, self.type.schema)
+        jsonschema.validate(self.options, self.type.schema)
         return True
 
     def validate_query_parameters(self):
