@@ -26,7 +26,7 @@ def get_schema_for_module_type(name):
     except IOError as e:
         path = os.path.join(
             os.path.dirname(__file__),
-            'schema/module.json'.format(name))
+            'schema/module_schema.json'.format(name))
         with open(path, "r") as file:
             schema = file.read()
     schema_dict = json.loads(schema)
