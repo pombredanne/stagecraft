@@ -2,8 +2,6 @@
   "id": "/ModuleCommon",
   "type": "object",
   "properties": {
-    // because options is what gets extended with flat stuff this doesn't appear direct on the model...
-    // actually do need stuff I already deleted?
     "axes": {
       "type": "object",
       "properties": {
@@ -69,74 +67,6 @@
     }
   },
   "definitions": {
-    "query-params": {
-      "type": "object",
-      "properties": {
-        "period": {
-          "allOf": [
-            {
-              "required": false
-            },
-            {
-              "type": "string",
-              "enum": [
-                "hour",
-                "day",
-                "week",
-                "month",
-                "quarter"
-              ]
-            }
-          ]
-        },
-        "start_at": {
-          "type": "string",
-          "required": false
-        },
-        "end_at": {
-          "type": "string",
-          "required": false
-        },
-        "duration": {
-          "type": "integer",
-          "required": false
-        },
-        "sort_by": {
-          "type": "string",
-          "required": false
-        },
-        "group_by": {
-          "oneOf": [
-            {
-              "type": "string",
-              "required": false
-            },
-            {
-              "type": "array",
-              "required": false,
-              "items": {
-                "type": "string"
-              }
-            }
-          ]
-        },
-        "collect": {
-          "type": "array",
-          "required": false,
-          "items": {
-            "type": "string",
-            "pattern": ":(sum|mean|set)$"
-          }
-        },
-        "filter_by": {
-          "type": "array",
-          "required": false,
-          "items": {
-            "type": "string"
-          }
-        }
-      }
-    },
     "axis": {
       "type": "object",
       "properties": {
@@ -171,5 +101,6 @@
         }
       }
     }
-  }
+  },
+  "$schema": "http://json-schema.org/draft-03/schema#"
 }
