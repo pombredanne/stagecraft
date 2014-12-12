@@ -13,7 +13,14 @@ else:
 
 STAGECRAFT_ROOT = '{0}://{1}'.format(HTTP_PROTOCOL, settings.APP_HOSTNAME)
 
-transform_type = {
+def find_modules(dashboards, module_type):
+    for dashboard in dashboards:
+        modules = requests.get(STAGECRAFT_ROOT + '/public/dashboards?slug=' + dashboard['slug'], headers=headers).json()['modules']
+        for module in modules:
+            if module['module-type'] == module_type:
+                yield module
+
+completion_transform_type = {
     "name": "rate",
     "function": "backdrop.transformers.tasks.rate.compute",
     "schema": {
@@ -41,61 +48,79 @@ transform_type = {
     }
 }
 
+user_satisfaction_transform_type = {
+    "name": "user_satisfaction",
+    "function": "backdrop.transformers.tasks.user_satisfaction.compute",
+    "schema": {}
+}
+
+transform_types = [completion_transform_type, user_satisfaction_transform_type]
+transform_metadata = {
+    'rate': {
+        'module': 'completion_rate',
+        'data_type_append': 'rate',
+        'options': {
+            'denominatorMatcher': 'denominator-matcher',
+            'numeratorMatcher': 'numerator-matcher',
+            'matchingAttribute': 'matching-attribute',
+            'valueAttribute': 'value-attribute',
+        },
+    },
+    'user_satisfaction': {
+        'module': 'user_satisfaction_graph',
+        'data_type_append': 'weekly',
+        'options': {},
+    }
+}
+
 headers = {
     'Authorization': 'Bearer {0}'.format(settings.MIGRATION_SIGNON_TOKEN),
     'Content-Type': 'application/json',
 }
 
-r = requests.post(STAGECRAFT_ROOT + '/transform-type',
-                  data=json.dumps(transform_type), headers=headers)
-
-print r.status_code,
-print r.content
-
-transform_type_id = r.json()['id']
-
-
-def find_modules(dashboards):
-    for dashboard in dashboards:
-        modules = requests.get(STAGECRAFT_ROOT + '/public/dashboards?slug=' + dashboard['slug'], headers=headers).json()['modules']
-        for module in modules:
-            if module['module-type'] == 'completion_rate':
-                yield module
-
-
 dashboards = requests.get(STAGECRAFT_ROOT + '/public/dashboards', headers=headers).json()['items']
 
-for module in find_modules(dashboards):
-    data_group_name = module['data-source']['data-group']
-    data_type_name = module['data-source']['data-type']
-    new_data_type_name = module['data-source']['data-type'] + '-rate'
+for transform_type in transform_types:
+    r = requests.post(STAGECRAFT_ROOT + '/transform-type',
+                    data=json.dumps(transform_type), headers=headers)
 
-    (data_group, data_group_created) = DataGroup.objects.get_or_create(name=data_group_name)
-    (data_type, data_type_created) = DataType.objects.get_or_create(name=new_data_type_name)
+    if r.status_code != 200:
+        print r.text
+        exit('Received error from Stagecraft when making TransformType: ' + transform_type['name'])
 
-    if data_group_created:
-        exit('Data group did not exist before script started')
+    transform_type_id = r.json()['id']
 
-    transform = {
-        "type_id": transform_type_id,
-        "input": {
-            "data-group": data_group_name,
-            "data-type": data_type_name,
-        },
-        "query-parameters": module['data-source']['query-params'],
-        "options": {
-            "denominatorMatcher": module['denominator-matcher'],
-            "numeratorMatcher": module['numerator-matcher'],
-            "matchingAttribute": module['matching-attribute'],
-            "valueAttribute": module['value-attribute'],
-        },
-        "output": {
-            "data-group": data_group_name,
-            "data-type": new_data_type_name,
+    metadata = transform_metadata[transform_type['name']]
+    for module in find_modules(dashboards, metadata['module']):
+        data_group_name = module['data-source']['data-group']
+        data_type_name = module['data-source']['data-type']
+        new_data_type_name = module['data-source']['data-type'] + '-' + metadata['data_type_append']
+
+        (data_group, data_group_created) = DataGroup.objects.get_or_create(name=data_group_name)
+        (data_type, data_type_created) = DataType.objects.get_or_create(name=new_data_type_name)
+
+        if data_group_created:
+            exit('Data group did not exist before script started')
+
+        transform = {
+            "type_id": transform_type_id,
+            "input": {
+                "data-group": data_group_name,
+                "data-type": data_type_name,
+            },
+            "query-parameters": module['data-source']['query-params'],
+            "options": {transform_option: module[spotlight_option] for transform_option, spotlight_option in metadata['options'].iteritems()},
+            "output": {
+                "data-group": data_group_name,
+                "data-type": new_data_type_name,
+            }
         }
-    }
 
-    r = requests.post(
-        STAGECRAFT_ROOT + '/transform', data=json.dumps(transform), headers=headers)
+        r = requests.post(
+            STAGECRAFT_ROOT + '/transform', data=json.dumps(transform), headers=headers)
 
-    print r.status_code
+        if r.status_code != 200:
+            print r.text
+            exit('Received error from Stagecraft when making Transform: ' + data_group_name + ' ' + new_data_type_name)
+
+print "Finished creating TransformTypes and Transforms."
