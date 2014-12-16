@@ -118,13 +118,19 @@ for transform_type in transform_types:
         else:
             print "Data set already existed" + data_group_name + " " + data_type_name + " " + new_data_type_name
 
+        excluded_query_parameters = ['duration']
+
+        query_parameters = {
+            param: value for param, value in module['data-source']['query-params'].iteritems() if param not in excluded_query_parameters
+        }
+
         transform = {
             "type_id": transform_type_id,
             "input": {
                 "data-group": data_group_name,
                 "data-type": data_type_name,
             },
-            "query-parameters": module['data-source']['query-params'],
+            "query-parameters": query_parameters,
             "options": {transform_option: module[spotlight_option] for transform_option, spotlight_option in metadata['options'].iteritems()},
             "output": {
                 "data-group": data_group_name,
