@@ -2,6 +2,7 @@ from django.conf import settings
 
 from stagecraft.apps.datasets.models.data_group import DataGroup
 from stagecraft.apps.datasets.models.data_type import DataType
+from stagecraft.apps.datasets.models.data_set import DataSet
 
 import json
 import requests
@@ -105,6 +106,17 @@ for transform_type in transform_types:
 
         if data_group_created:
             exit('Data group did not exist before script started')
+
+        (data_set, data_set_created) = DataSet.objects.get_or_create(
+            data_group=data_group,
+            data_type=data_type,
+            defaults={'bearer_token': 'foobars'}
+        )
+
+        if data_set_created:
+            print "Created data set" + data_group_name + " " + data_type_name + " " + new_data_type_name
+        else:
+            print "Data set already existed" + data_group_name + " " + data_type_name + " " + new_data_type_name
 
         transform = {
             "type_id": transform_type_id,
