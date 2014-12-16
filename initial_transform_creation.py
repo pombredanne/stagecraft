@@ -1,6 +1,7 @@
 from django.conf import settings
 
 from stagecraft.apps.dashboards.models.dashboard import Dashboard
+from stagecraft.apps.dashboards.models.module import ModuleType
 
 from stagecraft.apps.datasets.models.data_group import DataGroup
 from stagecraft.apps.datasets.models.data_type import DataType
@@ -60,7 +61,7 @@ user_satisfaction_transform_type = {
     "schema": {}
 }
 
-transform_types = [completion_transform_type, user_satisfaction_transform_type]
+transform_types = [completion_transform_type] # , user_satisfaction_transform_type
 transform_metadata = {
     'rate': {
         'module': 'completion_rate',
@@ -145,5 +146,23 @@ for transform_type in transform_types:
         if r.status_code != 200:
             print r.text
             exit('Received error from Stagecraft when making Transform: ' + data_group_name + ' ' + new_data_type_name)
+
+
+        # Change the existing module
+        module.type = ModuleType.objects.get(name='single_timeseries')
+        module.data_set = data_set
+        module.query_parameters = {}
+        module.options = {
+            "format-options": {
+                "type": "percent"
+            },
+            "value-attribute": "rate",
+            "axes": {
+                "y": [{"label": "Completion percentage"}],
+                "x": {"label": "Date", "key": ["_start_at", "_end_at"], "format": "date"},
+            }
+        }
+        module.full_clean()
+        module.save()
 
 print "Finished creating TransformTypes and Transforms."
