@@ -13,7 +13,7 @@ from django.db import DataError, IntegrityError
 
 from jsonschema import FormatChecker
 from jsonschema.compat import str_types
-from jsonschema.exceptions import SchemaError, ValidationError
+from jsonschema.exceptions import ValidationError
 
 logger = logging.getLogger(__name__)
 
@@ -23,10 +23,12 @@ UUID_RE = re.compile(UUID_RE_STRING)
 FORMAT_CHECKER = FormatChecker()
 
 
-def resource_url(ident, cls):
+def resource_url(ident, cls, finder_matcher=None):
+    finder_matcher = finder_matcher if finder_matcher else '<id>{}'.format(
+        UUID_RE_STRING)
     return url(
-        r'^{}(?:/(?P<id>{})(?:/(?P<sub_resource>[a-z]+))?)?'.format(
-            ident, UUID_RE_STRING),
+        r'^{}(?:/(?P{})(?:/(?P<sub_resource>[a-z]+))?)?'.format(
+            ident, finder_matcher),
         csrf_exempt(cls.as_view()))
 
 
@@ -40,16 +42,19 @@ class ResourceView(View):
 
     model = None
     id_field = 'id'
+    generated_id = True
     schema = {}
     sub_resources = {}
     list_filters = {}
 
-    def list(self, request):
+    def list(self, request, additional_filters={}):
         filter_items = [
             (model_filter, request.GET.get(query_filter, None))
             for (query_filter, model_filter) in self.list_filters.items()
         ]
         filter_args = {k: v for (k, v) in filter_items if v is not None}
+        # Used to filter by, for instance, backdrop user
+        filter_args = dict(filter_args.items() + additional_filters.items())
 
         return self.model.objects.filter(**filter_args)
 
@@ -58,7 +63,7 @@ class ResourceView(View):
 
         try:
             return self.model.objects.get(**get_args)
-        except self.model.DoesNotExist as err:
+        except self.model.DoesNotExist:
             return None
 
     def from_resource(self, request, model):
@@ -96,9 +101,12 @@ class ResourceView(View):
             return HttpResponse('sub resource not found', status=404)
 
     def post(self, request, **kwargs):
-        model_json, err = self._validate_json(request)
-        if err:
-            return err
+        if 'model_json' not in kwargs:
+            model_json, err = self._validate_json(request)
+            if err:
+                return err
+        else:
+            model_json = kwargs['model_json']
 
         model = self._get_or_create_model(model_json)
 
@@ -140,11 +148,17 @@ class ResourceView(View):
     def _get_or_create_model(self, model_json):
         if self.id_field in model_json:
             id = model_json[self.id_field]
-            try:
-                model = self.model.objects.get(id=id)
-            except self.model.DoesNotExist as err:
-                return HttpResponse(
-                    'model with id {} not found'.format(id))
+            if self.generated_id:
+                try:
+                    model = self.model.objects.get(**{self.id_field: id})
+                except self.model.DoesNotExist:
+                    return HttpResponse(
+                        'model with id {} not found'.format(id))
+            else:
+                try:
+                    model = self.model.objects.get(**{self.id_field: id})
+                except self.model.DoesNotExist:
+                    model = self.model()
         else:
             model = self.model()
 
