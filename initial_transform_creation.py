@@ -15,7 +15,11 @@ STAGECRAFT_ROOT = '{0}://{1}'.format(HTTP_PROTOCOL, settings.APP_HOSTNAME)
 
 def find_modules(dashboards, module_type):
     for dashboard in dashboards:
-        modules = requests.get(STAGECRAFT_ROOT + '/public/dashboards?slug=' + dashboard['slug'], headers=headers).json()['modules']
+        if dashboard['slug'] == 'prison-visits':
+            modules = requests.get(STAGECRAFT_ROOT + '/public/dashboards?slug=' + dashboard['slug'], headers=headers).json()['modules']
+        else:
+            modules = []
+
         for module in modules:
             if module['module-type'] == module_type:
                 yield module
