@@ -1,5 +1,7 @@
 from django.conf import settings
 
+from stagecraft.apps.dashboards.models.dashboard import Dashboard
+
 from stagecraft.apps.datasets.models.data_group import DataGroup
 from stagecraft.apps.datasets.models.data_type import DataType
 from stagecraft.apps.datasets.models.data_set import DataSet
@@ -16,14 +18,13 @@ STAGECRAFT_ROOT = '{0}://{1}'.format(HTTP_PROTOCOL, settings.APP_HOSTNAME)
 
 def find_modules(dashboards, module_type):
     for dashboard in dashboards:
-        if dashboard['slug'] == 'prison-visits':
-            modules = requests.get(STAGECRAFT_ROOT + '/public/dashboards?slug=' + dashboard['slug'], headers=headers).json()['modules']
+        if dashboard.slug == 'prison-visits':
+            modules = dashboard.module_set.filter(type__name=module_type)
         else:
             modules = []
 
         for module in modules:
-            if module['module-type'] == module_type:
-                yield module
+            yield module
 
 completion_transform_type = {
     "name": "rate",
@@ -83,7 +84,7 @@ headers = {
     'Content-Type': 'application/json',
 }
 
-dashboards = requests.get(STAGECRAFT_ROOT + '/public/dashboards', headers=headers).json()['items']
+dashboards = Dashboard.objects.all()
 
 for transform_type in transform_types:
     r = requests.post(STAGECRAFT_ROOT + '/transform-type',
@@ -97,9 +98,9 @@ for transform_type in transform_types:
 
     metadata = transform_metadata[transform_type['name']]
     for module in find_modules(dashboards, metadata['module']):
-        data_group_name = module['data-source']['data-group']
-        data_type_name = module['data-source']['data-type']
-        new_data_type_name = module['data-source']['data-type'] + '-' + metadata['data_type_append']
+        data_group_name = module.data_set.data_group.name
+        data_type_name = module.data_set.data_type.name
+        new_data_type_name = data_type_name + '-' + metadata['data_type_append']
 
         (data_group, data_group_created) = DataGroup.objects.get_or_create(name=data_group_name)
         (data_type, data_type_created) = DataType.objects.get_or_create(name=new_data_type_name)
@@ -121,7 +122,7 @@ for transform_type in transform_types:
         excluded_query_parameters = ['duration']
 
         query_parameters = {
-            param: value for param, value in module['data-source']['query-params'].iteritems() if param not in excluded_query_parameters
+            param: value for param, value in module.query_parameters.iteritems() if param not in excluded_query_parameters
         }
 
         transform = {
@@ -131,7 +132,7 @@ for transform_type in transform_types:
                 "data-type": data_type_name,
             },
             "query-parameters": query_parameters,
-            "options": {transform_option: module[spotlight_option] for transform_option, spotlight_option in metadata['options'].iteritems()},
+            "options": {transform_option: module.options[spotlight_option] for transform_option, spotlight_option in metadata['options'].iteritems()},
             "output": {
                 "data-group": data_group_name,
                 "data-type": new_data_type_name,
