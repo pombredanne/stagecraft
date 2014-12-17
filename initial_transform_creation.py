@@ -15,7 +15,7 @@ BACKDROP_ROOT = settings.BACKDROP_URL
 
 def find_modules(dashboards, module_type):
     for dashboard in dashboards:
-        if dashboard.slug == 'prison-visits':
+        if dashboard.slug in ('prison-visits', 'lasting-power-of-attorney', 'accelerated-possession-eviction'):
             modules = dashboard.module_set.filter(type__name=module_type)
         else:
             modules = []
@@ -57,11 +57,12 @@ user_satisfaction_transform_type = {
     "schema": {}
 }
 
-transform_types = [completion_transform_type] # , user_satisfaction_transform_type
+transform_types = [completion_transform_type, user_satisfaction_transform_type]
 transform_metadata = {
     'rate': {
         'module': 'completion_rate',
         'data_type_append': 'rate',
+        'query_parameters': {},
         'options': {
             'denominatorMatcher': 'denominator-matcher',
             'numeratorMatcher': 'numerator-matcher',
@@ -72,6 +73,16 @@ transform_metadata = {
     'user_satisfaction': {
         'module': 'user_satisfaction_graph',
         'data_type_append': 'weekly',
+        'query_parameters': {
+            'collect': [
+                'rating_1:sum',
+                'rating_2:sum',
+                'rating_3:sum',
+                'rating_4:sum',
+                'rating_5:sum',
+                'total:sum',
+            ],
+        },
         'options': {},
     }
 }
@@ -97,7 +108,13 @@ for transform_type in transform_types:
     for module in find_modules(dashboards, metadata['module']):
         data_group_name = module.data_set.data_group.name
         data_type_name = module.data_set.data_type.name
-        new_data_type_name = data_type_name + '-' + metadata['data_type_append']
+
+        if metadata['module'] == 'completion_rate':
+            new_data_type_name = module.slug
+        elif metadata['module'] == 'user_satisfaction_graph':
+            new_data_type_name = 'user-satisfaction-score'
+        else:
+            new_data_type_name = data_type_name + '-' + metadata['data_type_append']
 
         (data_group, data_group_created) = DataGroup.objects.get_or_create(name=data_group_name)
         (data_type, data_type_created) = DataType.objects.get_or_create(name=new_data_type_name)
@@ -124,9 +141,9 @@ for transform_type in transform_types:
 
         excluded_query_parameters = ['duration']
 
-        query_parameters = {
+        query_parameters = dict(metadata['query_parameters'].items() + {
             param: value for param, value in module.query_parameters.iteritems() if param not in excluded_query_parameters
-        }
+        }.items())
 
         transform = {
             "type_id": transform_type_id,
@@ -150,37 +167,49 @@ for transform_type in transform_types:
             exit('Received error from Stagecraft when making Transform: ' + data_group_name + ' ' + new_data_type_name)
 
         # Run the transform against the existing data
-        transform_headers = {
+        backdrop_headers = {
             'Authorization': 'Bearer {0}'.format(existing_data_set.bearer_token),
             'Content-Type': 'application/json',
         }
+        r = requests.get(
+            'http://localhost:3038/data/{}/{}?limit=1&sort_by=_timestamp:ascending'.format(data_group_name, data_type_name),
+            headers=backdrop_headers,
+        )
+
+        if r.status_code != 200:
+            print r.text
+            exit('Error getting oldest data point')
+
+        earliest_timestamp = r.json()['data'][0]['_timestamp']
+
         run_transform = {
-            "_start_at": "1980-01-01T00:00:00Z"
+            "_start_at": earliest_timestamp
         }
         r = requests.post(
             BACKDROP_ROOT + '/data/{0}/{1}/transform'.format(data_group_name, data_type_name),
             data=json.dumps(run_transform),
-            headers=transform_headers
+            headers=backdrop_headers
         )
 
 
         # Change the existing module
-        module.type = ModuleType.objects.get(name='single_timeseries')
-        module.data_set = data_set
-        module.query_parameters = {
-            'sort_by': '_timestamp:descending',
-        }
-        module.options = {
-            "format-options": {
-                "type": "percent"
-            },
-            "value-attribute": "rate",
-            "axes": {
-                "y": [{"label": "Completion percentage"}],
-                "x": {"label": "Date", "key": ["_start_at", "_end_at"], "format": "date"},
+        if metadata['module'] == 'completion_rate':
+            module.type = ModuleType.objects.get(name='single_timeseries')
+            module.data_set = data_set
+            module.query_parameters = {
+                'sort_by': '_timestamp:ascending',
             }
-        }
-        module.full_clean()
-        module.save()
+            module.options = {
+                "format-options": {
+                    "type": "percent"
+                },
+                "value-attribute": "rate",
+                "axes": {
+                    "y": [{"label": "Completion percentage"}],
+                    "x": {"label": "Date", "key": ["_start_at", "_end_at"], "format": "date"},
+                }
+            }
+            module.full_clean()
+            module.save()
 
 print "Finished creating TransformTypes and Transforms."
