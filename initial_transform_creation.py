@@ -10,12 +10,8 @@ from stagecraft.apps.datasets.models.data_set import DataSet
 import json
 import requests
 
-if 'development' in settings.APP_HOSTNAME:
-    HTTP_PROTOCOL = 'http'
-else:
-    HTTP_PROTOCOL = 'https'
-
-STAGECRAFT_ROOT = '{0}://{1}'.format(HTTP_PROTOCOL, settings.APP_HOSTNAME)
+STAGECRAFT_ROOT = settings.APP_ROOT
+BACKDROP_ROOT = settings.BACKDROP_URL
 
 def find_modules(dashboards, module_type):
     for dashboard in dashboards:
@@ -109,16 +105,22 @@ for transform_type in transform_types:
         if data_group_created:
             exit('Data group did not exist before script started')
 
+        existing_data_type = DataType.objects.get(name=data_type_name)
+        existing_data_set = DataSet.objects.get(
+            data_group=data_group,
+            data_type=existing_data_type
+        )
+
         (data_set, data_set_created) = DataSet.objects.get_or_create(
             data_group=data_group,
             data_type=data_type,
-            defaults={'bearer_token': 'foobars'}
+            defaults={'bearer_token': 'foobars'} # FIXME: This token needs to be changed
         )
 
         if data_set_created:
-            print "Created data set" + data_group_name + " " + data_type_name + " " + new_data_type_name
+            print "Created data set: " + data_group_name + " " + data_type_name + " " + new_data_type_name
         else:
-            print "Data set already existed" + data_group_name + " " + data_type_name + " " + new_data_type_name
+            print "Data set already existed: " + data_group_name + " " + data_type_name + " " + new_data_type_name
 
         excluded_query_parameters = ['duration']
 
@@ -147,11 +149,27 @@ for transform_type in transform_types:
             print r.text
             exit('Received error from Stagecraft when making Transform: ' + data_group_name + ' ' + new_data_type_name)
 
+        # Run the transform against the existing data
+        transform_headers = {
+            'Authorization': 'Bearer {0}'.format(existing_data_set.bearer_token),
+            'Content-Type': 'application/json',
+        }
+        run_transform = {
+            "_start_at": "1980-01-01T00:00:00Z"
+        }
+        r = requests.post(
+            BACKDROP_ROOT + '/data/{0}/{1}/transform'.format(data_group_name, data_type_name),
+            data=json.dumps(run_transform),
+            headers=transform_headers
+        )
+
 
         # Change the existing module
         module.type = ModuleType.objects.get(name='single_timeseries')
         module.data_set = data_set
-        module.query_parameters = {}
+        module.query_parameters = {
+            'sort_by': '_timestamp:descending',
+        }
         module.options = {
             "format-options": {
                 "type": "percent"
