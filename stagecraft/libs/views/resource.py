@@ -83,7 +83,7 @@ class ResourceView(View):
     def from_resource(self, request, model):
         return None
 
-    def update_model(self, model, model_json):
+    def update_model(self, model, model_json, request):
         pass
 
     def get(self, request, **kwargs):
@@ -122,20 +122,17 @@ class ResourceView(View):
             return HttpResponse('sub resource not found', status=404)
 
     def post(self, user, request, **kwargs):
-        if 'model_json' not in kwargs:
-            model_json, err = self._validate_json(request)
-            if err:
-                return err
-        else:
-            model_json = kwargs['model_json']
-
-        model = self._get_or_create_model(model_json)
-
-        err = self.update_model(model, model_json)
+        model_json, err = self._validate_json(request)
         if err:
             return err
 
-        err = self._validate_model(model)
+        model = self._get_or_create_model(model_json)
+
+        err = self.update_model(model, model_json, request)
+        if err:
+            return err
+
+        err = self._validate_model(model, request)
         if err:
             return err
 
@@ -185,7 +182,7 @@ class ResourceView(View):
 
         return model
 
-    def _validate_model(self, model):
+    def _validate_model(self, model, request):
         if hasattr(model, 'validate'):
             err = model.validate()
             if err:
