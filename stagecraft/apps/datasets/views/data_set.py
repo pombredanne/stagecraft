@@ -1,3 +1,4 @@
+import json
 from stagecraft.libs.views.utils import(
     to_json,
     long_cache,
@@ -101,9 +102,18 @@ class DataSetView(ResourceView):
         model_json, err = self._validate_json(request)
         if err:
             return err
+        name = generate_data_set_name(
+            model_json['data_group'],
+            model_json['data_type'])
+        kwargs['model_json'] = model_json
         try:
-            data_group = DataGroup.objects.get(name=model_json['data_group'])
-            data_type = DataType.objects.get(name=model_json['data_type'])
+            return super(DataSetView, self).post(user, request, **kwargs)
+        except InstanceExistsError:
+            return build_400(
+                logger,
+                request,
+                "A data set with the name '{}' already exists"
+                .format(name))
         except DataGroup.DoesNotExist:
             return build_400(
                 logger,
@@ -116,32 +126,26 @@ class DataSetView(ResourceView):
                 request,
                 "No data type with name '{}' found"
                 .format(model_json['data_type']))
-        model_json['data_group'] = data_group
-        model_json['data_type'] = data_type
-        name = generate_data_set_name(data_group, data_type)
-        model_json['name'] = name
-        kwargs['model_json'] = model_json
-        try:
-            return super(DataSetView, self).post(user, request, **kwargs)
-        except InstanceExistsError:
-            return build_400(
-                logger,
-                request,
-                "A data set with the name '{}' already exists"
-                .format(name))
 
     def _get_or_create_model(self, model_json):
-        model = super(DataSetView, self)._get_or_create_model(model_json)
-        # update should work if the following two lines are removed.
+        name = generate_data_set_name(
+            model_json['data_group'],
+            model_json['data_type'])
+        model_json['name'] = name
+        return super(DataSetView, self)._get_or_create_model(model_json)
+
+    def _validate_model(self, model):
         if model.pk:
             raise InstanceExistsError
-        return model
-        # Don't yet support update with data sets.
+        return super(DataSetView, self)._validate_model(model)
 
     def update_model(self, model, model_json):
+        data_group = DataGroup.objects.get(name=model_json['data_group'])
+        data_type = DataType.objects.get(name=model_json['data_type'])
+        model_json['data_group'] = data_group
+        model_json['data_type'] = data_type
         for (key, value) in model_json.items():
             setattr(model, key, value)
-        model.save()
 
     @staticmethod
     def serialize(model):
