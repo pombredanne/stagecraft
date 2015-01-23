@@ -20,7 +20,7 @@ class TransformType(models.Model):
         max_length=25,
         unique=True,
     )
-    schema = JSONField(blank=True)
+    schema = JSONField(default={})
 
     function_validator = RegexValidator(
         '^[a-z_\.]+$',
